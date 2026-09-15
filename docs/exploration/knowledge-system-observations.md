@@ -224,7 +224,7 @@ Research Literature note 中的 `我的笔记` 区域提供了一个有价值的
 
 ## 5. ContextD 可吸收原则
 
-来源：`/home/Akira/Work/contextd` 当前 `CONTEXT.md`、PRD、TRD 与 Core v2 Build Spec。ContextD 的产品职责与 Akira Knowledge 不相同，但它在来源、派生、投影和治理方面已经形成成熟边界，值得作为内部架构参考。
+来源：`/home/Akira/Work/contextd` 当前 `CONTEXT.md`、PRD、TRD 与 Core v2 Build Spec。本节仅把 ContextD 在来源、派生、投影和治理方面的设计作为架构参考；ContextD 与 Akira Knowledge 没有产品依赖、运行时集成或共同数据模型，后续不得据本节推导 Adapter、跨产品引用合同或 backend 关系。
 
 ### 5.1 Source-first：长期知识不能切断原始来源
 
@@ -261,5 +261,5 @@ ContextD 采用风险分级治理：低风险、来源完整的派生可以自�
 - Obsidian 是否只是默认前端，还是产品契约的一部分；
 - Agent 直接编辑文件与通过 Obsidian CLI 操作的边界；
 - 是否需要本地索引、全文检索、向量检索或其他派生数据层；
-- 如何与 Akira Research、工程项目、运行时 Context / Memory 建立跨产品引用；
+- Akira Research、项目 Context 与 Runtime Memory 的既有 ownership 已由仓库边界规定，不在 Knowledge v0.1 中额外设计跨产品同步或引用体系；
 - 最终有哪些 Skill、各自按什么需求打包和安装。
