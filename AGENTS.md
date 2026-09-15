@@ -28,3 +28,17 @@ Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知�
 - 不默认添加 package metadata、CI、marketplace、release automation 或 License；这些都需要独立决策。
 - 正式提交遵守 Akira 全局 Git 规则与 Guard 提交入口。
 - 未来接入 Lattice 时，Lattice 只固定本仓 revision，不作为运行时 Skill source。
+
+## Agent skills
+
+### Issue tracker
+
+本仓使用 GitHub Issues 作为 issue tracker。具体操作契约见 `docs/agents/issue-tracker.md`。
+
+### Workflow roles
+
+工作流角色直接使用 canonical 名称作为 GitHub labels。具体映射见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+本仓采用 single-context domain layout；领域词汇使用根目录 `CONTEXT.md`，ADR 在首次需要时按 `docs/agents/domain.md` 约定建立。
