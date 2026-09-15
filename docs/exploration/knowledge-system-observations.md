@@ -214,13 +214,43 @@ Research 明确要求同一逻辑内容只能有一个可直接编辑的 authori
 
 Research 把 Navigation 留给人实际点击阅读的对象，把 References / provenance 用于精确来源与内部 pointer。Knowledge 也可继续观察这种分工：人类阅读入口保持清晰，机器所需的精确关系和追溯信息不必全部挤进正文阅读路径。
 
-### 4.5 用户拥有的内容区域需要显式 authority boundary
+### 4.5 面向人的长期知识内容需要显式修改授权
 
-Research Literature note 中的 `我的笔记` 区域明确禁止 Agent 重写、整理或总结；用户确认也不能由 Agent 代替完成。这给 Knowledge 一个重要提醒：即使 Agent 可以维护知识库，也需要允许某些内容明确属于“用户原文 / 用户判断 / 用户确认”，Agent 只能引用或提出建议，不能静默改写。
+Research Literature note 中的 `我的笔记` 区域提供了一个有价值的 ownership 例子，但 Knowledge 不应机械照搬成“Agent 永远不能替用户执行确认或修改”。更合适的方向是：**凡是要改变面向人长期阅读的知识正文，Agent 必须先按用户的表达习惯说明准备新增什么、删除什么、修改什么；只有用户明确同意后，Agent 才执行落盘修改。**
+
+这意味着“提出修改”和“执行已批准修改”是两件事。Agent 可以主动发现问题、起草修订、说明理由，也可以在用户批准后实际编辑；但不能把模型自己的判断静默写进用户的人类知识层。机器内部的可重建索引、缓存、检查结果等是否需要逐次确认，应与人类正文修改分开设计。
 
 ---
 
-## 5. 暂不回答、留待正式设计阶段的问题
+## 5. ContextD 可吸收原则
+
+来源：`/home/Akira/Work/contextd` 当前 `CONTEXT.md`、PRD、TRD 与 Core v2 Build Spec。ContextD 的产品职责与 Akira Knowledge 不相同，但它在来源、派生、投影和治理方面已经形成成熟边界，值得作为内部架构参考。
+
+### 5.1 Source-first：长期知识不能切断原始来源
+
+ContextD 把 Source Record / Resource Revision 视为长期权威来源，Claim、Memory、认知判断与各种视图都必须保留来源或派生链。对 Knowledge 的启发是：AI 提炼后的长期知识可以成为高价值阅读资产，但不能因此删除、覆盖或洗掉原始来源身份；需要严肃核验时应能继续回到原始材料。
+
+### 5.2 Authority 与 Projection 分离
+
+ContextD 明确把全文索引、向量、图、排序、冲突、当前状态和认知视图视为可重建 Projection，而不是第二套 Authority。Knowledge 可吸收这一点：Obsidian Bases、搜索索引、embedding、graph cache、自动生成视图等即使非常重要，也应优先视为可重建派生层，不能因为某个插件或索引损坏就丢失真正知识资产。
+
+### 5.3 派生结果保留 lineage，不把模型输出直接当事实
+
+ContextD 的模型 processor 可以提出候选、Claim、entity resolution 或认知判断，但这些派生都保留 Derivation lineage；语义相似度也只能提供候选，不能自动证明等价、自动合并身份或制造新的独立证据。
+
+对 Knowledge 的启发是：AI 可以负责综合、关系发现、重复候选、冲突候选和摘要，但机器推断与原始内容、用户判断、正式长期知识之间需要保留可解释边界。
+
+### 5.4 当前视图不应通过覆盖历史产生
+
+ContextD 的 Current Claim View 从历史 Claim、有效性、修订关系和治理状态重建，而不是“最后写入者获胜”。这对 Knowledge 很有价值：知识发生更新时，更适合保留旧说法及其来源、记录修订/替代关系，再构造当前可用视图；不应为了让知识库看起来整洁而静默抹掉历史认识。
+
+### 5.5 用户治理与 Agent 自动维护需要分层
+
+ContextD 采用风险分级治理：低风险、来源完整的派生可以自动形成可纠正结果；敏感推断、高影响 identity merge、权限扩张等需要更强确认。Akira Knowledge 可以借鉴“风险不同，治理强度不同”的思想，但面向人的长期知识正文采用用户已经明确提出的更严格边界：任何新增、删除或实质修改都先说明拟变更，再取得用户明确同意。
+
+---
+
+## 6. 暂不回答、留待正式设计阶段的问题
 
 以下问题已经出现，但当前阶段不提前讨论或定案：
 
