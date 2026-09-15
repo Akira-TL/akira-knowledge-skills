@@ -31,3 +31,11 @@
 ## 派生投影（Projection）
 
 表示从 Authority 或具有明确 lineage 的上游信息派生出的可重建表示，例如 Obsidian Bases、全文索引、embedding、graph cache、ranking 和 generated context view。Projection 可以持久化，也可以通过明确映射的界面操作请求修改对应 Authority，但其自身不得成为第二套可编辑真相；丢失或过期 Projection 不得造成 canonical knowledge 丢失。
+
+## 修改治理
+
+人类内容 Authority 的语义增删改必须先向用户展示拟变更范围并取得明确批准；用户批准的是一个明确的语义变更集，不是逐文件授权。已批准操作必然导致、且可以机械证明不改变语义的配套维护可以自动执行，但不得借机扩张修改范围。结构化 Authority 中，由真实操作、明确用户动作或确定性流程产生的 provenance、lineage、材料状态等可以自动维护；模型推断出的标签、关系、冲突或适用性判断必须先作为 candidate / Projection，经相应治理后才能升级为 Authority。
+
+## Round-trip safety 与冲突处理
+
+对 Markdown、YAML 或其他人类可编辑表示的修改必须最小化并保持 round-trip safety：保留未知字段、无关正文、用户格式偏好、链接与注释，不得为了修改一个字段而无关地重排或重写整份文件。Authority 与 Projection 漂移时按 ownership 解决，不采用 last-write-wins；Projection 应由 Authority 重建。若用户直接修改了并非该位置拥有的结构化镜像字段，应把变化解释为修改请求或检测为 drift，而不是静默接管 Authority。执行已批准变更前必须重新读取相关 Authority；若批准依据之后出现可能冲突的修改，必须 fail closed 并重新生成提案，只有可机械证明互不相交的变化才能继续执行。
