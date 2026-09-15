@@ -156,7 +156,71 @@ Level 3：形成工作流
 
 ---
 
-## 3. 暂不回答、留待正式设计阶段的问题
+## 3. 开源 Agent / Obsidian 知识库项目观察
+
+当前重点参考包括 `kepano/obsidian-skills`、`obsidian_mcp`、Everything Vault、Chiyu Knowledge Base Skills、Marginalia、MemoryWiki 等。它们的具体实现差异很大，但有几项值得继续保留的共同方向。
+
+### 3.1 Obsidian 能力层与 Knowledge 工作流层分离
+
+`kepano/obsidian-skills` 主要提供 Obsidian Markdown、Bases、Canvas 与 CLI 等格式 / 操作原语，不替用户规定完整知识管理方法；`obsidian_mcp` 则在底层读写能力之上提供 Inbox 整理、MOC、孤立笔记连接等工作流。
+
+这支持一个候选分层：Obsidian 适配能力不应等同 Akira Knowledge 的领域方法。Knowledge workflow 可以依赖 Obsidian 能力，但不应把 Markdown 语法、CLI 操作与知识生命周期规则揉成一个 Skill。
+
+### 3.2 Round-trip safety 与最小侵入修改值得吸收
+
+Agent 获得写权限后，不能因为解析和重新序列化而无意重排用户正文、frontmatter、链接或其他格式。外部项目把 round-trip safety 视为硬约束，这一点适合 Akira Knowledge：Agent 的“能修改”不等于“可以顺便重写整个文件”。
+
+### 3.3 Raw Source 与长期 Knowledge 分层是高频共识
+
+多个项目都把原始材料与提炼后的长期知识分开，只是命名不同，例如 Source / Wiki / Scratch、Raw / Wiki / Runtime。共同点是：原始材料不因总结存在而失去价值；长期知识也不能冒充原始来源。
+
+对 Akira Knowledge 的启发是，严肃使用场景需要能够从长期知识继续追溯到 Source，并在需要核验时回到原始 artifact。
+
+### 3.4 Agent 更适合承担维护成本，而不是单纯生成更多笔记
+
+开源项目中重复出现的高价值行为包括：链接维护、孤立笔记发现、标签/属性规范化、陈旧信息检查、矛盾发现、索引与视图维护、相关知识召回和上下文构造。这提示 Knowledge Agent 的主要价值可能是长期维护知识网络，而不是最大化生成笔记数量。
+
+### 3.5 Canonical knowledge 的写权限需要单独设计
+
+不同项目从“Agent 可持续维护 Wiki”到“所有 AI 输出先进入 Outbox 再由人审核”差异很大。目前只记录共识：写入 authority 必须显式，不能默认所有模型输出都直接升级为 canonical knowledge。哪些变更可以自动进入正式知识、哪些需要人工确认，留待设计阶段讨论。
+
+### 3.6 Schema 与关系结构应保持克制
+
+一端是普通 Markdown + 检索，另一端是 typed knowledge graph。当前更值得吸收的是“满足 Agent 可靠工作的最小结构”原则，而不是预先建立复杂本体。普通 wikilink 可承担导航关系；真正需要可计算语义时再评估 typed relation。
+
+---
+
+## 4. 从 Akira Research 吸收的人类 / Agent 双层原则
+
+Research 系列已经形成一套比一般 PKM 项目更成熟的人机边界，可作为 Knowledge 的直接内部参考，但不等于照搬科研对象模型。
+
+### 4.1 机器内部层与人类阅读层职责分离
+
+Research 使用 `.research/` 保存机器状态、内部支持 artifact、审计、追溯、验证与可重建执行信息；普通项目目录则提供人类实际阅读和导航的 Markdown / PDF 等入口。
+
+值得 Knowledge 吸收的不是目录名本身，而是原则：**主要供 Agent 使用的高密度结构化信息可以采用机器友好的表示；主要供人长期阅读、理解和编辑的内容必须优先保证人类可读性。** 不要求一份文件同时承担所有机器状态和所有人类表达。
+
+### 4.2 人类层不是机器层的裸 dump
+
+Research 的人类 README、Literature note、Research Tree view 都会把 canonical state 投影为适合阅读的结构、导航和叙事，而不是把数据库行、JSON 或内部 artifact 原样暴露给用户。
+
+因此 Knowledge 后续即使存在索引、关系表、embedding、graph cache 或其他机器层，也不应要求用户通过这些内部表示理解自己的知识库。
+
+### 4.3 一个逻辑内容只有一个 canonical editable source
+
+Research 明确要求同一逻辑内容只能有一个可直接编辑的 authority；生成的 PDF、DOCX、视图或其他表示不能形成第二套独立真相。这个原则适合 Knowledge：Obsidian View、Bases、索引、图谱缓存或自动生成摘要若属于派生层，应能说明 producer 和 source，不与可编辑正文互相漂移。
+
+### 4.4 人类导航与机器 provenance 分工
+
+Research 把 Navigation 留给人实际点击阅读的对象，把 References / provenance 用于精确来源与内部 pointer。Knowledge 也可继续观察这种分工：人类阅读入口保持清晰，机器所需的精确关系和追溯信息不必全部挤进正文阅读路径。
+
+### 4.5 用户拥有的内容区域需要显式 authority boundary
+
+Research Literature note 中的 `我的笔记` 区域明确禁止 Agent 重写、整理或总结；用户确认也不能由 Agent 代替完成。这给 Knowledge 一个重要提醒：即使 Agent 可以维护知识库，也需要允许某些内容明确属于“用户原文 / 用户判断 / 用户确认”，Agent 只能引用或提出建议，不能静默改写。
+
+---
+
+## 5. 暂不回答、留待正式设计阶段的问题
 
 以下问题已经出现，但当前阶段不提前讨论或定案：
 
