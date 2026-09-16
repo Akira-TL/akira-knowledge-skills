@@ -114,6 +114,29 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             PRIMARY KEY (identity, revision),
             FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT
         );
+        CREATE TABLE IF NOT EXISTS material_records (
+            identity TEXT PRIMARY KEY,
+            status TEXT NOT NULL CHECK (status IN ('待处理', '已处理')),
+            captured_at TEXT NOT NULL,
+            FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT
+        );
+        CREATE TABLE IF NOT EXISTS material_sources (
+            material_identity TEXT NOT NULL,
+            ordinal INTEGER NOT NULL,
+            locator TEXT NOT NULL,
+            captured_at TEXT NOT NULL,
+            PRIMARY KEY (material_identity, ordinal),
+            FOREIGN KEY (material_identity) REFERENCES material_records(identity) ON DELETE RESTRICT
+        );
+        CREATE INDEX IF NOT EXISTS material_sources_locator_idx
+            ON material_sources(locator);
+        CREATE TABLE IF NOT EXISTS capture_events (
+            material_identity TEXT PRIMARY KEY,
+            captured_at TEXT NOT NULL,
+            intent_mode TEXT NOT NULL,
+            note_fingerprint TEXT NOT NULL,
+            FOREIGN KEY (material_identity) REFERENCES material_records(identity) ON DELETE RESTRICT
+        );
         """
     )
     current = conn.execute(
@@ -139,6 +162,50 @@ def get_by_locator(conn: sqlite3.Connection, locator: str) -> ObjectRecord | Non
     if row is None:
         return None
     return ObjectRecord(**dict(row))
+
+
+def find_materials_by_source(conn: sqlite3.Connection, locator: str) -> list[str]:
+    rows = conn.execute(
+        "SELECT material_identity FROM material_sources WHERE locator = ? ORDER BY material_identity",
+        (locator,),
+    ).fetchall()
+    return [row["material_identity"] for row in rows]
+
+
+def insert_material_capture(
+    conn: sqlite3.Connection,
+    *,
+    identity: str,
+    locator: str,
+    fingerprint: str,
+    sources: Sequence[str],
+) -> None:
+    timestamp = now_utc()
+    conn.execute(
+        "INSERT INTO objects(identity, kind, locator, revision, authority_fingerprint, registered_at, updated_at) "
+        "VALUES (?, 'material_record', ?, 1, ?, ?, ?)",
+        (identity, locator, fingerprint, timestamp, timestamp),
+    )
+    conn.execute(
+        "INSERT INTO revisions(identity, revision, event, locator, authority_fingerprint, recorded_at) "
+        "VALUES (?, 1, 'captured', ?, ?, ?)",
+        (identity, locator, fingerprint, timestamp),
+    )
+    conn.execute(
+        "INSERT INTO material_records(identity, status, captured_at) VALUES (?, '待处理', ?)",
+        (identity, timestamp),
+    )
+    conn.execute(
+        "INSERT INTO capture_events(material_identity, captured_at, intent_mode, note_fingerprint) "
+        "VALUES (?, ?, 'explicit', ?)",
+        (identity, timestamp, fingerprint),
+    )
+    for ordinal, source in enumerate(sources):
+        conn.execute(
+            "INSERT INTO material_sources(material_identity, ordinal, locator, captured_at) "
+            "VALUES (?, ?, ?, ?)",
+            (identity, ordinal, source, timestamp),
+        )
 
 
 def insert_registration(

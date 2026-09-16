@@ -43,8 +43,12 @@ Akira Knowledge 专用 Properties 当前为：
 
 已有已注册对象再次执行 registration 时保持同一 identity；若检测到其人类 Authority 已经发生未同步修改，当前 bootstrap 命令停止，等待 revision-safe 更新工作流处理，不把 registration 当成覆盖入口。
 
-## 3. 当前实现边界
+## 3. 路由到 Capture
 
-本 Skill 当前实现 `0.1.x` 的 Vault bootstrap / registration 纵向切片。Capture、Curate、Retrieval 与长期维护属于同一 0.1 Spec 的后续实现票；这些能力尚未存在时，不得把缺失工作流伪装成已完成能力，也不得自行用临时 Markdown/SQLite 操作绕过其 owning Skill。
+用户明确表达长期保存意图时，路由到 sibling `knowledge-capture` Skill，由它负责创建材料记录。Router 不自行复制 Capture 的进入条件、Source/provenance 或材料状态规则；普通任务上下文没有明确持久化意图时不得进入 Capture。
+
+## 4. 当前实现边界
+
+当前 `0.1.x` 已实现 Vault bootstrap / registration 与显式 Capture。Curate、Retrieval 与 revision-safe 长期知识更新属于同一 0.1 Spec 的后续实现票；这些能力尚未存在时，不得把缺失工作流伪装成已完成能力，也不得自行用临时 Markdown/SQLite 操作绕过其 owning Skill。
 
 需要依赖 Vault 语义的 Obsidian 操作时复用既有 Obsidian 能力；Akira Knowledge 不创建第二套通用 Obsidian Skill。

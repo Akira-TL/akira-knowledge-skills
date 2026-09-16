@@ -6,7 +6,8 @@ import re
 
 AK_ID = "akira_knowledge_id"
 AK_KIND = "akira_knowledge_kind"
-AK_KEYS = (AK_ID, AK_KIND)
+AK_STATUS = "akira_knowledge_status"
+AK_KEYS = (AK_ID, AK_KIND, AK_STATUS)
 _KEY_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*:")
 
 
@@ -76,6 +77,17 @@ def inject_registration(text: str, *, identity: str, kind: str) -> str:
     if view.exists:
         return view.prefix + "".join(view.lines + injected) + view.closing + view.body
     return "---\n" + "".join(injected) + "---\n" + text
+
+
+def create_material_markdown(*, identity: str, status: str, capture_note: str) -> str:
+    return (
+        "---\n"
+        f"{AK_ID}: {identity}\n"
+        "akira_knowledge_kind: material_record\n"
+        f"{AK_STATUS}: {status}\n"
+        "---\n"
+        f"{capture_note}"
+    )
 
 
 def registration_values(text: str) -> dict[str, str]:

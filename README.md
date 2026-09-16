@@ -22,8 +22,8 @@ Akira Knowledge 面向显式、持久、可检查、可更新和可复用的知�
 - Primary Router：`akira-knowledge`。
 - 0.x Wayfinder：已完成。
 - 0.1.x：实现中。
-- 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础。
-- 当前尚未完成：Capture、Curate、Retrieval、revision-safe update 与最终 0.1.x 黑盒发布门禁。
+- 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础，以及显式 Capture 到材料记录。
+- 当前尚未完成：Curate、Retrieval、revision-safe update 与最终 0.1.x 黑盒发布门禁。
 
 ## Development
 
