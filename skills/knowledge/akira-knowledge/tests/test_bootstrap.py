@@ -184,6 +184,24 @@ class BootstrapBlackBoxTests(unittest.TestCase):
         self.assertIn("outside approved management scopes", result.stderr)
         self.assertEqual("untouched\n", untouched.read_text(encoding="utf-8"))
 
+    def test_default_write_root_must_stay_inside_approved_scope(self) -> None:
+        approved = self.vault / "Approved"
+        approved.mkdir()
+        note = approved / "Stable.md"
+        note.write_text("stable\n", encoding="utf-8")
+
+        result = self.run_cli(
+            "register",
+            "--vault", str(self.vault),
+            "--scope", "Approved",
+            "--note", "Approved/Stable.md",
+            "--default-write-root", "Outside",
+            expect=2,
+        )
+        self.assertIn("Default write root is outside approved management scopes", result.stderr)
+        self.assertEqual("stable\n", note.read_text(encoding="utf-8"))
+        self.assertFalse((self.vault / ".akira-knowledge").exists())
+
     def test_changing_default_write_root_does_not_move_registered_note(self) -> None:
         old_root = self.vault / "Old"
         new_root = self.vault / "New"

@@ -152,6 +152,10 @@ def register_notes(
     root = _vault_root(vault)
     normalized_scopes = _normalize_scopes(root, scopes)
     default_root, _ = _safe_relative(root, default_write_root, must_exist=False)
+    if not _within_scope(default_root, normalized_scopes):
+        raise BootstrapError(
+            f"Default write root is outside approved management scopes: {default_root}"
+        )
     if not notes:
         raise BootstrapError("At least one explicitly approved Markdown note is required")
     if kind != "knowledge_asset":
