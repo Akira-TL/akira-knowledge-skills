@@ -28,6 +28,14 @@
 
 用于指向由其他产品、系统或外部来源拥有的对象，可包含 owner / namespace、identifier、适用时的 revision 与 locator。外部引用是值类型而非独立领域实体，不因被 Knowledge 使用而取得被引用对象的 ownership。
 
+## 稳定 identity 与 revision
+
+材料记录、知识资产与关系记录都拥有独立于文件路径、文件名、标题和 Obsidian wikilink 文本的稳定机器 identity。rename、move 与普通标题修改不会创建新对象；它们只更新当前 locator、可读属性与对象 revision。每次 canonical Authority 成功发生变化时，对象当前 revision 都必须变化；Projection 重建、全文索引刷新、embedding 重算或 Graph View Projection 重建不得改变 Authority revision。revision 用于精确状态识别与 stale-write 检测，不等同于面向人的长期历史版本。
+
+有语义意义的 Authority 变化必须保持长期可追溯性，至少能够说明原状态、修改原因、发生时间、依据与批准来源；由已批准操作必然引出的纯机械配套维护只需保留必要审计，不需要逐项制造面向人的历史版本。只要仍是同一个可独立理解的知识单元，正常更新、补充、纠错或适用边界变化保持原 identity 并产生新 revision；split、真正的 merge 或以新的长期知识单元替代旧单元属于 identity 级变化，必须经过既有用户批准治理。退役或被替代对象的旧 identity 默认永久保留且不得复用，除非用户明确要求物理删除并且删除语义要求不保留 tombstone。
+
+关系记录的 identity 表示一个具体语义关系；改变 `source`、`type` 或 `target` 通常意味着结束旧 relation 并创建新的 relation identity，而 provenance 补充或治理状态变化可以在同一 identity 上产生新 revision。材料记录 identity 表示材料进入 Knowledge 工作流及其 Knowledge 自有处理状态，不等于 URL、DOI、文件哈希或其他 Source identity；外部对象的 revision 仍由原 owner 管理，Knowledge 只保存必要的外部引用。Obsidian 人类导航继续使用 wikilink，但机器语义必须解析回稳定 identity；文件移动、重命名或 Graph Projection 重建不能改变对象身份。
+
 ## 权威来源（Authority）
 
 表示某一逻辑语义唯一可直接编辑并决定其正式状态的来源。Authority 由语义职责而不是文件格式决定；同一逻辑内容不得同时存在两份可编辑 Authority。知识资产正文及用户主动维护的属性、导航链接属于人类内容 Authority；关系记录、材料记录的工作流状态、provenance / derivation lineage、精确外部引用及后续明确的治理或 revision 语义属于结构化 Authority。外部对象的事实与身份仍由其原 owner 持有 Authority。
