@@ -40,6 +40,16 @@
 
 表示某一逻辑语义唯一可直接编辑并决定其正式状态的来源。Authority 由语义职责而不是文件格式决定；同一逻辑内容不得同时存在两份可编辑 Authority。知识资产正文及用户主动维护的属性、导航链接属于人类内容 Authority；关系记录、材料记录的工作流状态、provenance / derivation lineage、精确外部引用及后续明确的治理或 revision 语义属于结构化 Authority。外部对象的事实与身份仍由其原 owner 持有 Authority。
 
+## 持久化布局约束
+
+知识资产的长期人类可读正文直接以 Obsidian Markdown 正文作为 Authority，不在 SQLite 或其他机器存储中维护第二份可独立编辑的正文真相。真正进入 Knowledge 工作流的材料记录也默认具有可在 Obsidian 中阅读和链接的 Markdown 节点；原始 PDF、网页、文件或其他 Source artifact 保持其原有身份，材料节点只保存 Knowledge 自己的 capture / workflow 语义与必要引用。
+
+YAML frontmatter / Obsidian Properties 只承担适合与单篇 Markdown 共同存在的小型、原子属性，例如稳定 identity、对象类别、标题/别名、用户标签，以及经字段 ownership 明确定义的少量对象状态或引用。frontmatter 不承担大段 provenance、全量 typed relation、长期 revision history、embedding、graph cache 或其他高密度机器状态。具体字段名和字段分配留给 Spec，但每一项语义只能指定一个 Authority；如果同一值也出现在其他存储中，其他副本只能是 Projection。
+
+跨对象且需要可靠查询的结构化 Authority 默认进入一个本地 SQLite machine store，包括 typed relation、provenance / derivation lineage、语义 history / revision metadata、必要审计和其他明确属于结构化 Authority 的机器语义。SQLite 不拥有知识正文，也不把 Markdown 变成数据库渲染结果。0.x 默认不为每篇 Markdown 建立配套 `.json` / `.yaml` sidecar；只有未来某类 artifact 出现独立且充分理由时才另行决策。Git 可以用于 backup、diff、recovery 与仓库 history，但不作为 Knowledge 领域 revision/history 的唯一 Authority。
+
+Obsidian Bases、全文索引、embedding、graph cache、ranking 以及为了 Graph View 生成的机器 Markdown 节点都属于 Projection。机器可视化 Markdown 应处于明确的 generated / Projection 区域并允许整批删除后从 Authority 重建。具体目录名、SQLite 路径、schema、字段名和 migration 机制由后续 Spec / 版本规划确定，不改变上述 ownership 约束。
+
 ## 派生投影（Projection）
 
 表示从 Authority 或具有明确 lineage 的上游信息派生出的可重建表示，例如 Obsidian Bases、全文索引、embedding、graph cache、ranking、generated context view，以及为了 Obsidian 图谱可视化而生成的机器可视化 Markdown 节点。Projection 可以持久化，也可以通过明确映射的界面操作请求修改对应 Authority，但其自身不得成为第二套可编辑真相；丢失或过期 Projection 不得造成 canonical knowledge 丢失。
