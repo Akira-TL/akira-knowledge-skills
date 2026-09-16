@@ -218,6 +218,73 @@ def get_by_locator(conn: sqlite3.Connection, locator: str) -> ObjectRecord | Non
     return ObjectRecord(**dict(row))
 
 
+def list_objects(conn: sqlite3.Connection) -> list[ObjectRecord]:
+    rows = conn.execute(
+        "SELECT identity, kind, locator, revision, authority_fingerprint "
+        "FROM objects ORDER BY identity"
+    ).fetchall()
+    return [ObjectRecord(**dict(row)) for row in rows]
+
+
+def initialize_search_projection(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS search_index_meta ("
+        "identity TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, indexed_at TEXT NOT NULL)"
+    )
+    conn.execute(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(identity UNINDEXED, content)"
+    )
+
+
+def reset_search_projection(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS search_fts")
+    conn.execute("DROP TABLE IF EXISTS search_index_meta")
+    initialize_search_projection(conn)
+
+
+def search_projection_state(conn: sqlite3.Connection) -> dict[str, str]:
+    rows = conn.execute(
+        "SELECT identity, fingerprint FROM search_index_meta ORDER BY identity"
+    ).fetchall()
+    return {str(row["identity"]): str(row["fingerprint"]) for row in rows}
+
+
+def search_projection_count(conn: sqlite3.Connection) -> int:
+    row = conn.execute("SELECT COUNT(*) AS count FROM search_fts").fetchone()
+    return int(row["count"])
+
+
+def rebuild_search_projection(
+    conn: sqlite3.Connection,
+    documents: Sequence[tuple[str, str, str]],
+) -> None:
+    timestamp = now_utc()
+    conn.execute("DELETE FROM search_fts")
+    conn.execute("DELETE FROM search_index_meta")
+    for identity, fingerprint, content in documents:
+        conn.execute(
+            "INSERT INTO search_fts(identity, content) VALUES (?, ?)",
+            (identity, content),
+        )
+        conn.execute(
+            "INSERT INTO search_index_meta(identity, fingerprint, indexed_at) VALUES (?, ?, ?)",
+            (identity, fingerprint, timestamp),
+        )
+
+
+def query_search_projection(
+    conn: sqlite3.Connection,
+    query: str,
+) -> list[tuple[str, str]]:
+    phrase = '"' + query.replace('"', '""') + '"'
+    rows = conn.execute(
+        "SELECT identity, snippet(search_fts, 1, '[', ']', ' … ', 12) AS evidence "
+        "FROM search_fts WHERE search_fts MATCH ? ORDER BY rank",
+        (phrase,),
+    ).fetchall()
+    return [(str(row["identity"]), str(row["evidence"])) for row in rows]
+
+
 def find_materials_by_source(conn: sqlite3.Connection, locator: str) -> list[str]:
     rows = conn.execute(
         "SELECT material_identity FROM material_sources WHERE locator = ? ORDER BY material_identity",

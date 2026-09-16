@@ -126,6 +126,27 @@ def replace_knowledge_property(text: str, *, key: str, value: str) -> str:
     return view.prefix + "".join(lines) + view.closing + view.body
 
 
+def top_level_properties(text: str) -> dict[str, str]:
+    view = split_frontmatter(text)
+    values: dict[str, str] = {}
+    for line in view.lines:
+        if not line or line[0].isspace() or line.lstrip().startswith("#"):
+            continue
+        match = _KEY_RE.match(line)
+        if not match:
+            continue
+        key = match.group(1)
+        if key in values:
+            raise MarkdownConflict(f"Duplicate top-level YAML property: {key}")
+        _, raw = line.split(":", 1)
+        values[key] = raw.strip()
+    return values
+
+
+def searchable_text(text: str) -> str:
+    return human_authority_bytes(text).decode("utf-8")
+
+
 def registration_values(text: str) -> dict[str, str]:
     view = split_frontmatter(text)
     values: dict[str, str] = {}

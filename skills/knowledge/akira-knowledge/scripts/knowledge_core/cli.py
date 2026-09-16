@@ -11,8 +11,12 @@ from knowledge_core.service import (
     capture_material,
     create_curate_proposal,
     inspect_vault,
+    rebuild_full_text_projection,
     register_notes,
     reject_curate_proposal,
+    retrieve_exact,
+    retrieve_filter,
+    retrieve_full_text,
 )
 
 
@@ -63,6 +67,36 @@ def build_parser() -> argparse.ArgumentParser:
     reject_parser.add_argument("--vault", required=True, type=Path)
     reject_parser.add_argument("--proposal-id", required=True)
     reject_parser.add_argument("--confirmed-rejection", action="store_true")
+
+    exact_parser = subparsers.add_parser(
+        "retrieve-exact", help="Read one current Knowledge object by stable identity"
+    )
+    exact_parser.add_argument("--vault", required=True, type=Path)
+    exact_parser.add_argument("--identity", required=True)
+
+    filter_parser = subparsers.add_parser(
+        "retrieve-filter", help="Filter current Knowledge objects by authoritative properties"
+    )
+    filter_parser.add_argument("--vault", required=True, type=Path)
+    filter_parser.add_argument("--kind")
+    filter_parser.add_argument("--status")
+    filter_parser.add_argument(
+        "--property",
+        action="append",
+        default=[],
+        help="Top-level Authority property filter as key=value",
+    )
+
+    full_text_parser = subparsers.add_parser(
+        "retrieve-full-text", help="Search current Knowledge Markdown with a rebuildable FTS Projection"
+    )
+    full_text_parser.add_argument("--vault", required=True, type=Path)
+    full_text_parser.add_argument("--query", required=True)
+
+    rebuild_parser = subparsers.add_parser(
+        "retrieve-rebuild-index", help="Explicitly rebuild the full-text search Projection"
+    )
+    rebuild_parser.add_argument("--vault", required=True, type=Path)
     return parser
 
 
@@ -111,12 +145,35 @@ def main(argv: list[str] | None = None) -> int:
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,
             )
-        else:
+        elif args.command == "curate-reject":
             payload = reject_curate_proposal(
                 args.vault,
                 proposal_id=args.proposal_id,
                 confirmed_rejection=args.confirmed_rejection,
             )
+        elif args.command == "retrieve-exact":
+            payload = retrieve_exact(args.vault, identity=args.identity)
+        elif args.command == "retrieve-filter":
+            property_filters: dict[str, str] = {}
+            for item in args.property:
+                if "=" not in item:
+                    raise BootstrapError("Property filter must use key=value syntax")
+                key, value = item.split("=", 1)
+                if not key:
+                    raise BootstrapError("Property filter key must not be empty")
+                if key in property_filters:
+                    raise BootstrapError(f"Duplicate property filter: {key}")
+                property_filters[key] = value
+            payload = retrieve_filter(
+                args.vault,
+                kind=args.kind,
+                status=args.status,
+                properties=property_filters,
+            )
+        elif args.command == "retrieve-full-text":
+            payload = retrieve_full_text(args.vault, query=args.query)
+        else:
+            payload = rebuild_full_text_projection(args.vault)
     except (BootstrapError, OSError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2
