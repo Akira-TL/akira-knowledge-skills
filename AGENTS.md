@@ -22,6 +22,10 @@ Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知�
 - 多步骤流程使用可检查完成条件；分支材料按需放入 sibling references。
 - 同一规则保持一个 source of truth；人类文档与 owning Skill 的稳定行为同步更新。
 
+## 路线图
+
+0.x 系列的能力版图、minor 版本切分、版本依赖与延期原则以 `docs/roadmap/0x-series.md` 为 canonical source。共同领域与治理规则仍以 `CONTEXT.md` 和 accepted ADR 为准；路线图不得重新定义这些共同基线。
+
 ## 仓库与发布
 
 - 当前仓库没有可安装 Skill，不得生成看似可执行的安装命令。
