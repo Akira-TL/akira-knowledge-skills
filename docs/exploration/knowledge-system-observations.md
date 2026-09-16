@@ -261,5 +261,5 @@ ContextD 采用风险分级治理：低风险、来源完整的派生可以自�
 - Obsidian 是否只是默认前端，还是产品契约的一部分；
 - Agent 直接编辑文件与通过 Obsidian CLI 操作的边界；
 - 是否需要本地索引、全文检索、向量检索或其他派生数据层；
-- Akira Research、项目 Context 与 Runtime Memory 的既有 ownership 已由仓库边界规定，不在 Knowledge v0.1 中额外设计跨产品同步或引用体系；
+- Akira Research、项目 Context 与 Runtime Memory 的既有 ownership 已由仓库边界规定，不在 Knowledge 0.x 系列中额外设计跨产品同步或引用体系；
 - 最终有哪些 Skill、各自按什么需求打包和安装。

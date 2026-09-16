@@ -22,7 +22,7 @@
 
 ## 关系记录
 
-表示机器必须可靠理解的 typed relation，只有当明确关系语义会影响检索、推理、治理、provenance 或自动检查时才建立。关系记录至少包含 `source`、`type`、`target` 与 `provenance`；底层按有方向关系定义，对称性属于具体 relation type 的语义。关系端点可以是材料记录、知识资产，也可以是 Knowledge 外部对象的稳定引用。普通导航链接不自动升级为关系记录，关系记录也不要求自动镜像成人类链接；v0.1 只定义 relation 机制，不预先冻结大规模 relation ontology。模型推断出的 relation 必须先作为 candidate，经治理后才能成为结构化 Authority。
+表示机器必须可靠理解的 typed relation，只有当明确关系语义会影响检索、推理、治理、provenance 或自动检查时才建立。关系记录至少包含 `source`、`type`、`target` 与 `provenance`；底层按有方向关系定义，对称性属于具体 relation type 的语义。关系端点可以是材料记录、知识资产，也可以是 Knowledge 外部对象的稳定引用。普通导航链接不自动升级为关系记录，关系记录也不要求自动镜像成人类链接；0.x 系列共同冻结 relation 机制，不预先冻结大规模 relation ontology，具体 relation type 可以在后续版本出现真实需要时再增加。模型推断出的 relation 必须先作为 candidate，经治理后才能成为结构化 Authority。
 
 ## 外部引用
 
@@ -36,9 +36,9 @@
 
 表示从 Authority 或具有明确 lineage 的上游信息派生出的可重建表示，例如 Obsidian Bases、全文索引、embedding、graph cache、ranking、generated context view，以及为了 Obsidian 图谱可视化而生成的机器可视化 Markdown 节点。Projection 可以持久化，也可以通过明确映射的界面操作请求修改对应 Authority，但其自身不得成为第二套可编辑真相；丢失或过期 Projection 不得造成 canonical knowledge 丢失。
 
-## Obsidian v0.1 前端边界
+## Obsidian 0.x 前端边界
 
-Akira Knowledge v0.1 只支持 Obsidian 作为用户前端与知识浏览环境，当前不为第二套前端设计可替换 Adapter 抽象。Knowledge Skill 使用领域操作表达读取、修改、移动、重命名、属性维护、链接检查与视图查询；具体执行优先利用 Obsidian 官方 CLI 处理依赖 Vault 语义的操作，在满足 round-trip safety 且不依赖 Obsidian 特有语义时可以直接操作本地文件。CLI 不可用时，只有存在经过验证的语义等价 fallback 才继续执行，否则 fail closed；这不改变 canonical 内容应保持可检查、可恢复的本地表示这一要求。
+Akira Knowledge 0.x 系列只规划 Obsidian 作为用户前端与知识浏览环境，当前不为第二套前端设计可替换 Adapter 抽象。Knowledge Skill 使用领域操作表达读取、修改、移动、重命名、属性维护、链接检查与视图查询；具体执行优先利用 Obsidian 官方 CLI 处理依赖 Vault 语义的操作，在满足 round-trip safety 且不依赖 Obsidian 特有语义时可以直接操作本地文件。CLI 不可用时，只有存在经过验证的语义等价 fallback 才继续执行，否则 fail closed；这不改变 canonical 内容应保持可检查、可恢复的本地表示这一要求。
 
 ## 机器可视化 Markdown 节点
 

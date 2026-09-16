@@ -1,16 +1,16 @@
 # Repository instructions
 
-本仓库是 `Akira-TL/akira-knowledge-skills` 的 canonical source，维护 Akira Knowledge 产品。当前只完成仓库初始化；在对象模型、数据契约与 Skill ownership 明确之前，不发布占位 Skill，也不把规划描述成已实现能力。
+本仓库是 `Akira-TL/akira-knowledge-skills` 的 canonical source，维护 Akira Knowledge 产品。当前 Wayfinder 规划覆盖整个 0.x.x 系列，而不是只规划某一个早期小版本；先建立贯穿 0.x 的共同产品基线，再规划各 0.x 版本的能力边界与依赖。当前只完成仓库初始化；在对象模型、数据契约与 Skill ownership 明确之前，不发布占位 Skill，也不把规划描述成已实现能力。
 
 ## 产品边界
 
-Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知识资产。v0.1 的唯一用户前端与知识浏览环境是 Obsidian；当前不设计第二套前端或可替换前端抽象。canonical 内容继续优先采用普通本地文件与可检查结构，以保证数据可控、可恢复和 Agent 安全操作，而不是为了同时兼容其他前端。
+Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知识资产。0.x 系列的用户前端与知识浏览环境只规划 Obsidian；当前不设计第二套前端或可替换前端抽象。canonical 内容继续优先采用普通本地文件与可检查结构，以保证数据可控、可恢复和 Agent 安全操作，而不是为了同时兼容其他前端。
 
 - Scientific Research 的 Research Question、Hypothesis、Design、Study、Dataset、Analysis、Interpretation 与 evidence provenance 继续由 Akira Research 拥有。
 - 当前任务上下文由项目与 Agent harness 的 Context 机制拥有；Knowledge 不复制会话上下文。
 - Agent harness 的 Memory 属于运行时个性化能力；Knowledge 不冒充或替代运行时 Memory。
 
-v0.1 的 Primary Router 为 `akira-knowledge`，主要用户入口保持单一。领域工作流按用户意图与知识生命周期拆为 `knowledge-capture`、`knowledge-curate`、`knowledge-retrieve`、`knowledge-maintain`；Skill 拥有行为契约而不拥有领域对象。需要 Obsidian Markdown、Bases、CLI 等通用操作能力时，Router 只声明复用 `kepano/obsidian-skills` 中对应 Skill；安装、加载与版本处理交给实际执行任务的 Agent 按现有 Skill 管理规则完成。本仓不重复建立 `knowledge-obsidian` 底层 Skill，只有后续确认上游能力存在明显且持续的问题时再另行决策是否自建。
+0.x 系列的 Primary Router 为 `akira-knowledge`，主要用户入口保持单一。当前已确定的基础领域工作流按用户意图与知识生命周期拆为 `knowledge-capture`、`knowledge-curate`、`knowledge-retrieve`、`knowledge-maintain`；Skill 拥有行为契约而不拥有领域对象。后续 0.x 路线图只有在出现新的稳定用户意图或独立生命周期边界时才增加专业 Skill，不因新增对象、来源格式或实现技术机械拆分。需要 Obsidian Markdown、Bases、CLI 等通用操作能力时，Router 只声明复用 `kepano/obsidian-skills` 中对应 Skill；安装、加载与版本处理交给实际执行任务的 Agent 按现有 Skill 管理规则完成。本仓不重复建立 `knowledge-obsidian` 底层 Skill，只有后续确认上游能力存在明显且持续的问题时再另行决策是否自建。
 
 ## Skill 编写
 
