@@ -4,7 +4,7 @@
 
 ## 产品边界
 
-Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知识资产。
+Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知识资产。v0.1 的唯一用户前端与知识浏览环境是 Obsidian；当前不设计第二套前端或可替换前端抽象。canonical 内容继续优先采用普通本地文件与可检查结构，以保证数据可控、可恢复和 Agent 安全操作，而不是为了同时兼容其他前端。
 
 - Scientific Research 的 Research Question、Hypothesis、Design、Study、Dataset、Analysis、Interpretation 与 evidence provenance 继续由 Akira Research 拥有。
 - 当前任务上下文由项目与 Agent harness 的 Context 机制拥有；Knowledge 不复制会话上下文。

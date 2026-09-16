@@ -34,7 +34,15 @@
 
 ## 派生投影（Projection）
 
-表示从 Authority 或具有明确 lineage 的上游信息派生出的可重建表示，例如 Obsidian Bases、全文索引、embedding、graph cache、ranking 和 generated context view。Projection 可以持久化，也可以通过明确映射的界面操作请求修改对应 Authority，但其自身不得成为第二套可编辑真相；丢失或过期 Projection 不得造成 canonical knowledge 丢失。
+表示从 Authority 或具有明确 lineage 的上游信息派生出的可重建表示，例如 Obsidian Bases、全文索引、embedding、graph cache、ranking、generated context view，以及为了 Obsidian 图谱可视化而生成的机器可视化 Markdown 节点。Projection 可以持久化，也可以通过明确映射的界面操作请求修改对应 Authority，但其自身不得成为第二套可编辑真相；丢失或过期 Projection 不得造成 canonical knowledge 丢失。
+
+## Obsidian v0.1 前端边界
+
+Akira Knowledge v0.1 只支持 Obsidian 作为用户前端与知识浏览环境，当前不为第二套前端设计可替换 Adapter 抽象。Knowledge Skill 使用领域操作表达读取、修改、移动、重命名、属性维护、链接检查与视图查询；具体执行优先利用 Obsidian 官方 CLI 处理依赖 Vault 语义的操作，在满足 round-trip safety 且不依赖 Obsidian 特有语义时可以直接操作本地文件。CLI 不可用时，只有存在经过验证的语义等价 fallback 才继续执行，否则 fail closed；这不改变 canonical 内容应保持可检查、可恢复的本地表示这一要求。
+
+## 机器可视化 Markdown 节点
+
+表示为了让 Agent / 机器层内容进入 Obsidian Graph View 而生成的 Markdown Projection。该节点可以使用普通 wikilink 连接到人类可读知识资产或其他可视化节点，使用户能够在图谱中观察机器内容与人类知识的关联；这些链接和节点默认属于可重建 Projection，不因出现在 Graph View 中而自动成为知识资产、人类内容 Authority 或正式 typed relation。只有底层对应语义已经通过既有治理成为 Authority 时，Projection 才展示该 Authority，而不是替代它。
 
 ## Retrieval Contract
 
