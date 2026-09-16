@@ -7,6 +7,7 @@ import sys
 
 from knowledge_core.service import (
     BootstrapError,
+    apply_update_proposal,
     approve_curate_proposal,
     capture_material,
     create_curate_proposal,
@@ -17,6 +18,7 @@ from knowledge_core.service import (
     retrieve_exact,
     retrieve_filter,
     retrieve_full_text,
+    synchronize_object,
 )
 
 
@@ -53,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     propose_parser.add_argument("--body")
     propose_parser.add_argument("--body-file", type=Path)
     propose_parser.add_argument("--target-id")
+    propose_parser.add_argument("--base-revision", type=int)
 
     approve_parser = subparsers.add_parser(
         "curate-approve", help="Apply an explicitly approved create proposal"
@@ -97,6 +100,19 @@ def build_parser() -> argparse.ArgumentParser:
         "retrieve-rebuild-index", help="Explicitly rebuild the full-text search Projection"
     )
     rebuild_parser.add_argument("--vault", required=True, type=Path)
+
+    sync_parser = subparsers.add_parser(
+        "maintain-sync", help="Synchronize current locator/fingerprint into the revision ledger"
+    )
+    sync_parser.add_argument("--vault", required=True, type=Path)
+    sync_parser.add_argument("--identity", required=True)
+
+    update_parser = subparsers.add_parser(
+        "maintain-apply-update", help="Apply an approved update proposal with revision protection"
+    )
+    update_parser.add_argument("--vault", required=True, type=Path)
+    update_parser.add_argument("--proposal-id", required=True)
+    update_parser.add_argument("--confirmed-approval", action="store_true")
     return parser
 
 
@@ -138,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
                 proposed_body=proposed_body,
                 material_ids=args.material_id,
                 target_identity=args.target_id,
+                expected_base_revision=args.base_revision,
             )
         elif args.command == "curate-approve":
             payload = approve_curate_proposal(
@@ -172,8 +189,16 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "retrieve-full-text":
             payload = retrieve_full_text(args.vault, query=args.query)
-        else:
+        elif args.command == "retrieve-rebuild-index":
             payload = rebuild_full_text_projection(args.vault)
+        elif args.command == "maintain-sync":
+            payload = synchronize_object(args.vault, identity=args.identity)
+        else:
+            payload = apply_update_proposal(
+                args.vault,
+                proposal_id=args.proposal_id,
+                confirmed_approval=args.confirmed_approval,
+            )
     except (BootstrapError, OSError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2

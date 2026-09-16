@@ -8,9 +8,11 @@ from knowledge_core.workflows.retrieve import (
     retrieve_filter,
     retrieve_full_text,
 )
+from knowledge_core.workflows.maintain import apply_update_proposal, synchronize_object
 
 __all__ = [
     "BootstrapError",
+    "apply_update_proposal",
     "approve_curate_proposal",
     "capture_material",
     "create_curate_proposal",
@@ -21,4 +23,5 @@ __all__ = [
     "retrieve_exact",
     "retrieve_filter",
     "retrieve_full_text",
+    "synchronize_object",
 ]

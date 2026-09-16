@@ -7,6 +7,7 @@ from knowledge_core import storage
 from knowledge_core.common import BootstrapError, _safe_relative, _vault_root, _within_scope, _write_atomic
 from knowledge_core.ids import uuid7
 from knowledge_core.markdown import AK_ID, AK_KIND, AK_STATUS, MarkdownConflict, authority_fingerprint, create_knowledge_asset_markdown, registration_values, replace_knowledge_property
+from knowledge_core.workflows.maintain import sync_object_in_connection
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ def create_curate_proposal(
     proposed_body: str,
     material_ids: Sequence[str],
     target_identity: str | None = None,
+    expected_base_revision: int | None = None,
 ) -> dict[str, object]:
     root = _vault_root(vault)
     if not proposed_body:
@@ -40,23 +42,41 @@ def create_curate_proposal(
     try:
         storage.initialize_schema(conn)
         conn.commit()
+        with storage.transaction(conn):
+            material_syncs = [
+                sync_object_in_connection(root, conn, identity)
+                for identity in material_ids
+            ]
+            target_sync = (
+                sync_object_in_connection(root, conn, target_identity)
+                if target_identity is not None
+                else None
+            )
+
         material_bases: list[tuple[str, int]] = []
-        for identity in material_ids:
-            record = storage.get_by_identity(conn, identity)
-            if record is None or record.kind != "material_record":
-                raise BootstrapError(f"Material record does not exist: {identity}")
-            if storage.get_material_status(conn, identity) is None:
-                raise BootstrapError(f"Material state does not exist: {identity}")
-            material_bases.append((identity, record.revision))
+        for result in material_syncs:
+            if result.kind != "material_record":
+                raise BootstrapError(f"Material record does not exist: {result.identity}")
+            material_bases.append((result.identity, result.revision))
 
         proposal_kind = "create"
         base_revision: int | None = None
-        if target_identity is not None:
-            target = storage.get_by_identity(conn, target_identity)
-            if target is None or target.kind != "knowledge_asset":
-                raise BootstrapError(f"Knowledge asset does not exist: {target_identity}")
+        if target_sync is not None:
+            if target_sync.kind != "knowledge_asset":
+                raise BootstrapError(f"Knowledge asset does not exist: {target_sync.identity}")
+            if expected_base_revision is None:
+                raise BootstrapError(
+                    "Update proposal requires the base revision that was actually read"
+                )
+            if target_sync.revision != expected_base_revision:
+                raise BootstrapError(
+                    "Target revision changed during proposal preparation; "
+                    "re-read current Authority and create a new proposal"
+                )
             proposal_kind = "update"
-            base_revision = target.revision
+            base_revision = expected_base_revision
+        elif expected_base_revision is not None:
+            raise BootstrapError("base revision is only valid for an update proposal")
 
         proposal_id = str(uuid7())
         with storage.transaction(conn):

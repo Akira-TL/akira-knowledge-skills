@@ -55,8 +55,12 @@ Akira Knowledge 专用 Properties 当前为：
 
 用户要按 stable identity 找回对象、按 Authority 属性筛选或检索当前 Markdown 正文时，路由到 sibling `knowledge-retrieve` Skill。Retrieval 对 Authority 保持只读；全文索引等可重建 Projection 可以机械刷新，但不能因为命中结果自动添加标签、链接、关系、权重或改写正文。
 
-## 6. 当前实现边界
+## 6. 路由到 Maintenance
 
-当前 `0.1.x` 已实现 Vault bootstrap / registration、显式 Capture、Curate 的新建知识资产 proposal → approval 闭环，以及 Exact / Filter / Full-text 基础 Retrieval。既有知识 update proposal 可以生成，但其 revision-safe 执行与后续维护属于同一 0.1 Spec 的后续实现票；这些能力尚未存在时，不得把缺失工作流伪装成已完成能力，也不得自行用临时 Markdown/SQLite 操作绕过其 owning Skill。
+用户要更新既有长期知识，或已注册对象在 Obsidian 中发生 move / rename / direct edit 后准备继续写入时，路由到 sibling `knowledge-maintain` Skill。普通正文更新仍先由 `knowledge-curate` 形成 proposal；Maintenance 负责同步 current revision、执行 stale-write 门禁，并在明确批准后应用 update。
+
+## 7. 当前实现边界
+
+当前 `0.1.x` 已实现 Vault bootstrap / registration、显式 Capture、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval，以及既有知识的 revision-safe update。系统性长期 Review、主动陈旧/冲突候选、完整 Router 端到端验收与最终 0.1.x 发布门禁仍属于后续实现票；这些能力尚未存在时，不得把缺失工作流伪装成已完成能力，也不得自行用临时 Markdown/SQLite 操作绕过其 owning Skill。
 
 需要依赖 Vault 语义的 Obsidian 操作时复用既有 Obsidian 能力；Akira Knowledge 不创建第二套通用 Obsidian Skill。

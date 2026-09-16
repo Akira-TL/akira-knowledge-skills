@@ -20,7 +20,18 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py curate-propose \
   --body-file <proposal-body-file>
 ```
 
-为既有知识资产提出补充、纠错或适用边界修改时增加 `--target-id <knowledge-asset-id>`。proposal 是 candidate，不是人类内容 Authority；创建 proposal 不得改写目标知识 Markdown。
+为既有知识资产提出补充、纠错或适用边界修改时，必须先由 `knowledge-maintain` 执行 `maintain-sync` 得到当前 revision，再读取该 revision 对应的当前 Authority 并据此形成候选正文。保存 update proposal 时同时提供实际读取的基线：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py curate-propose \
+  --vault <vault> \
+  --material-id <material-id> \
+  --target-id <knowledge-asset-id> \
+  --base-revision <actually-read-revision> \
+  --body-file <proposal-body-file>
+```
+
+保存 proposal 时工具会再次同步目标；若 revision 已不同，说明“读取 → 形成 proposal”期间 Authority 又发生变化，必须 fail closed 并重新读取，而不能把旧内容生成的 proposal 绑定到新 revision。proposal 是 candidate，不是人类内容 Authority；创建 proposal 不得改写目标知识 Markdown。
 
 向用户展示拟批准的语义变更集：目标是新建还是更新、拟正文、依据材料，以及会发生的确定性 metadata / provenance / 状态维护。不得把 proposal 持久化本身描述成“知识已经更新”。
 
@@ -50,7 +61,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py curate-reject \
 
 ## 3. 既有知识更新边界
 
-当前可以为既有知识资产生成 update proposal，但执行已批准 update 必须交给 revision-safe 更新工作流。该工作流尚未完成时 fail closed，不得为了“已经得到用户批准”而直接覆盖当前 Markdown。
+既有知识资产的普通补充、纠错或适用边界修改仍在本 Skill 生成 update proposal；形成 proposal 前共享后端会同步目标对象与依据材料，使 proposal 绑定当前 `base_revision`。用户明确批准后，实际执行必须路由到 sibling `knowledge-maintain` 的 revision-safe 更新流程，不在 Curate 中直接覆盖 Markdown。
 
 普通 update 不得暗中执行 split、merge、supersede 或其他 identity-level 变化。需要改变对象身份结构时，必须另行形成明确的 identity-level 语义提案。
 

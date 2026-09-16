@@ -345,6 +345,47 @@ def get_proposal_materials(conn: sqlite3.Connection, proposal_id: str) -> list[t
     return [(str(row["material_identity"]), int(row["basis_revision"])) for row in rows]
 
 
+def record_external_state_change(
+    conn: sqlite3.Connection,
+    *,
+    identity: str,
+    locator: str,
+    fingerprint: str,
+    event: str,
+) -> int:
+    if event not in {"external_move", "external_edit", "external_move_and_edit"}:
+        raise StorageError(f"unsupported external state event: {event}")
+    record = get_by_identity(conn, identity)
+    if record is None:
+        raise StorageError(f"Knowledge object does not exist: {identity}")
+    new_revision = record.revision + 1
+    timestamp = now_utc()
+    conn.execute(
+        "UPDATE objects SET locator = ?, revision = ?, authority_fingerprint = ?, updated_at = ? "
+        "WHERE identity = ?",
+        (locator, new_revision, fingerprint, timestamp, identity),
+    )
+    conn.execute(
+        "INSERT INTO revisions(identity, revision, event, locator, authority_fingerprint, recorded_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (identity, new_revision, event, locator, fingerprint, timestamp),
+    )
+    return new_revision
+
+
+def revision_events_after(
+    conn: sqlite3.Connection,
+    *,
+    identity: str,
+    revision: int,
+) -> list[str]:
+    rows = conn.execute(
+        "SELECT event FROM revisions WHERE identity = ? AND revision > ? ORDER BY revision",
+        (identity, revision),
+    ).fetchall()
+    return [str(row["event"]) for row in rows]
+
+
 def reject_proposal(conn: sqlite3.Connection, proposal_id: str) -> None:
     timestamp = now_utc()
     changed = conn.execute(
@@ -389,6 +430,46 @@ def insert_knowledge_asset_from_proposal(
     ).rowcount
     if changed != 1:
         raise StorageError("proposal is not pending")
+
+
+def apply_knowledge_asset_update(
+    conn: sqlite3.Connection,
+    *,
+    identity: str,
+    locator: str,
+    fingerprint: str,
+    proposal_id: str,
+    material_bases: Sequence[tuple[str, int]],
+) -> int:
+    record = get_by_identity(conn, identity)
+    if record is None or record.kind != "knowledge_asset":
+        raise StorageError(f"knowledge asset does not exist: {identity}")
+    new_revision = record.revision + 1
+    timestamp = now_utc()
+    conn.execute(
+        "UPDATE objects SET locator = ?, revision = ?, authority_fingerprint = ?, updated_at = ? "
+        "WHERE identity = ?",
+        (locator, new_revision, fingerprint, timestamp, identity),
+    )
+    conn.execute(
+        "INSERT INTO revisions(identity, revision, event, locator, authority_fingerprint, recorded_at) "
+        "VALUES (?, ?, 'updated_from_proposal', ?, ?, ?)",
+        (identity, new_revision, locator, fingerprint, timestamp),
+    )
+    for material_identity, basis_revision in material_bases:
+        conn.execute(
+            "INSERT INTO knowledge_asset_materials(asset_identity, material_identity, proposal_id, material_basis_revision) "
+            "VALUES (?, ?, ?, ?)",
+            (identity, material_identity, proposal_id, basis_revision),
+        )
+    changed = conn.execute(
+        "UPDATE proposals SET status = 'applied', decided_at = ?, result_identity = ? "
+        "WHERE proposal_id = ? AND status = 'pending'",
+        (timestamp, identity, proposal_id),
+    ).rowcount
+    if changed != 1:
+        raise StorageError("proposal is not pending")
+    return new_revision
 
 
 def mark_material_processed(

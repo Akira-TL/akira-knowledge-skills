@@ -171,6 +171,7 @@ class CurateBlackBoxTests(unittest.TestCase):
             "--vault", str(self.vault),
             "--material-id", update_material["identity"],
             "--target-id", created["asset_identity"],
+            "--base-revision", "1",
             "--body", "更新后的候选正文",
         ]
         proposal = json.loads(self.run_cli(*args).stdout)

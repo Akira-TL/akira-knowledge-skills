@@ -126,6 +126,13 @@ def replace_knowledge_property(text: str, *, key: str, value: str) -> str:
     return view.prefix + "".join(lines) + view.closing + view.body
 
 
+def replace_human_body(text: str, *, body: str) -> str:
+    view = split_frontmatter(text)
+    if not view.exists:
+        return body
+    return view.prefix + "".join(view.lines) + view.closing + body
+
+
 def top_level_properties(text: str) -> dict[str, str]:
     view = split_frontmatter(text)
     values: dict[str, str] = {}
