@@ -2,7 +2,7 @@
 
 `Akira-TL/akira-knowledge-skills` 是 Akira Knowledge 的 canonical source，用于维护长期知识管理相关的 Skill、文档与配套实现。
 
-当前仓库只完成产品仓初始化，尚未发布可安装 Skill。计划中的 Primary Router 名称为 `akira-knowledge`；其对象模型、内部 Skill 边界与数据契约将在后续设计完成后再落地。
+0.x.x 产品规划已经完成，当前从 `0.1.x` 开始实现。Primary Router 为 `akira-knowledge`；首个已实现纵向切片是 Obsidian Vault 的只读 bootstrap 与经用户批准后的原地 registration。0.1.x 尚未通过最终发布门禁，因此当前实现不等同于稳定发布版本。
 
 ## 产品边界
 
@@ -18,9 +18,19 @@ Akira Knowledge 面向显式、持久、可检查、可更新和可复用的知�
 
 ## 当前状态
 
-- Repository：已初始化。
 - Product：Akira Knowledge。
-- Planned Primary Router：`akira-knowledge`。
-- Installable Skills：暂无。
+- Primary Router：`akira-knowledge`。
+- 0.x Wayfinder：已完成。
+- 0.1.x：实现中。
+- 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础。
+- 当前尚未完成：Capture、Curate、Retrieval、revision-safe update 与最终 0.1.x 黑盒发布门禁。
 
-在对象模型和 Skill ownership 明确之前，不把占位目录、临时脚本或未定协议描述为已发布能力。
+## Development
+
+运行当前黑盒测试：
+
+```bash
+./scripts/check.sh
+```
+
+在 0.1.x 发布门禁通过前，不把本地实现描述为稳定发布能力，也不生成未经发布流程确认的远端安装命令。
