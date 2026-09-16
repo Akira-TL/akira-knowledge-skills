@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 
-from knowledge_bootstrap.service import BootstrapError, capture_material, inspect_vault, register_notes
+from knowledge_core.service import BootstrapError, capture_material, inspect_vault, register_notes
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -7,8 +7,8 @@ from pathlib import Path
 import tempfile
 from typing import Sequence
 
-from knowledge_bootstrap.ids import uuid7
-from knowledge_bootstrap.markdown import (
+from knowledge_core.ids import uuid7
+from knowledge_core.markdown import (
     AK_ID,
     AK_KIND,
     MarkdownConflict,
@@ -18,7 +18,7 @@ from knowledge_bootstrap.markdown import (
     inject_registration,
     registration_values,
 )
-from knowledge_bootstrap import storage
+from knowledge_core import storage
 
 
 class BootstrapError(RuntimeError):
