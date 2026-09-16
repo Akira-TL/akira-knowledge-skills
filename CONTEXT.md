@@ -36,6 +36,12 @@
 
 表示从 Authority 或具有明确 lineage 的上游信息派生出的可重建表示，例如 Obsidian Bases、全文索引、embedding、graph cache、ranking 和 generated context view。Projection 可以持久化，也可以通过明确映射的界面操作请求修改对应 Authority，但其自身不得成为第二套可编辑真相；丢失或过期 Projection 不得造成 canonical knowledge 丢失。
 
+## Retrieval Contract
+
+Akira Knowledge 的基础检索能力不依赖向量数据库、知识图谱或 rerank，最低保证包括按稳定 identity 精确读取、按对象类型/状态/authoritative property 过滤、全文检索，以及沿正式 typed relation 的有方向扩展。默认长期知识检索以当前有效知识资产为范围；材料记录、退役知识、逻辑丢弃材料和历史 revision 只有在调用方显式要求时加入。每个结果至少返回 stable identity、object kind、canonical locator、matched evidence 与 retrieval reason；Contract 不定义跨 backend 的统一 relevance score。
+
+向量检索、graph ranking、rerank 与任务相关知识集合都属于可选、可重建 Projection。它们可以改变候选召回或排序，但不能据相似度、排名或被召回这一事实自动创建知识、修改 Authority 或升级为 typed relation。Projection 过期或损坏时应显式降级到仍可用的基础检索能力，不能把已知过期结果静默冒充当前结果，也不能阻止直接访问 canonical knowledge。该检索契约由 Akira Knowledge 自身需求定义；ContextD 等外部项目仅可作为设计参考，不构成其架构模板、接口来源、backend 或数据模型约束。
+
 ## 修改治理
 
 人类内容 Authority 的语义增删改必须先向用户展示拟变更范围并取得明确批准；用户批准的是一个明确的语义变更集，不是逐文件授权。已批准操作必然导致、且可以机械证明不改变语义的配套维护可以自动执行，但不得借机扩张修改范围。结构化 Authority 中，由真实操作、明确用户动作或确定性流程产生的 provenance、lineage、材料状态等可以自动维护；模型推断出的标签、关系、冲突或适用性判断必须先作为 candidate / Projection，经相应治理后才能升级为 Authority。
