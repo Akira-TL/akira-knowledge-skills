@@ -47,8 +47,12 @@ Akira Knowledge 专用 Properties 当前为：
 
 用户明确表达长期保存意图时，路由到 sibling `knowledge-capture` Skill，由它负责创建材料记录。Router 不自行复制 Capture 的进入条件、Source/provenance 或材料状态规则；普通任务上下文没有明确持久化意图时不得进入 Capture。
 
-## 4. 当前实现边界
+## 4. 路由到 Curate
 
-当前 `0.1.x` 已实现 Vault bootstrap / registration 与显式 Capture。Curate、Retrieval 与 revision-safe 长期知识更新属于同一 0.1 Spec 的后续实现票；这些能力尚未存在时，不得把缺失工作流伪装成已完成能力，也不得自行用临时 Markdown/SQLite 操作绕过其 owning Skill。
+用户要把一个或多个材料记录整理成长期知识，或要形成对既有知识资产的普通补充 / 纠错提案时，路由到 sibling `knowledge-curate` Skill。Router 不自行生成或应用长期知识正文；proposal / approval 与材料处理状态维护由 `knowledge-curate` 拥有。
+
+## 5. 当前实现边界
+
+当前 `0.1.x` 已实现 Vault bootstrap / registration、显式 Capture，以及 Curate 的新建知识资产 proposal → approval 闭环。既有知识 update proposal 可以生成，但其 revision-safe 执行、基础 Retrieval 与后续维护属于同一 0.1 Spec 的后续实现票；这些能力尚未存在时，不得把缺失工作流伪装成已完成能力，也不得自行用临时 Markdown/SQLite 操作绕过其 owning Skill。
 
 需要依赖 Vault 语义的 Obsidian 操作时复用既有 Obsidian 能力；Akira Knowledge 不创建第二套通用 Obsidian Skill。

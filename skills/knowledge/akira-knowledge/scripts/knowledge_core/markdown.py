@@ -90,6 +90,42 @@ def create_material_markdown(*, identity: str, status: str, capture_note: str) -
     )
 
 
+def create_knowledge_asset_markdown(*, identity: str, body: str) -> str:
+    return (
+        "---\n"
+        f"{AK_ID}: {identity}\n"
+        "akira_knowledge_kind: knowledge_asset\n"
+        "---\n"
+        f"{body}"
+    )
+
+
+def replace_knowledge_property(text: str, *, key: str, value: str) -> str:
+    if key not in AK_KEYS:
+        raise MarkdownConflict(f"Property is not owned by Akira Knowledge: {key}")
+    view = split_frontmatter(text)
+    if not view.exists:
+        raise MarkdownConflict("Registered Markdown is missing YAML frontmatter")
+
+    matches: list[int] = []
+    for index, line in enumerate(view.lines):
+        if not line or line[0].isspace() or line.lstrip().startswith("#"):
+            continue
+        match = _KEY_RE.match(line)
+        if match and match.group(1) == key:
+            matches.append(index)
+    if len(matches) != 1:
+        raise MarkdownConflict(
+            f"Expected exactly one Akira Knowledge property {key}, found {len(matches)}"
+        )
+
+    lines = list(view.lines)
+    old_line = lines[matches[0]]
+    newline = "\r\n" if old_line.endswith("\r\n") else "\n" if old_line.endswith("\n") else ""
+    lines[matches[0]] = f"{key}: {value}{newline}"
+    return view.prefix + "".join(lines) + view.closing + view.body
+
+
 def registration_values(text: str) -> dict[str, str]:
     view = split_frontmatter(text)
     values: dict[str, str] = {}
