@@ -50,6 +50,14 @@ YAML frontmatter / Obsidian Properties 只承担适合与单篇 Markdown 共同�
 
 Obsidian Bases、全文索引、embedding、graph cache、ranking 以及为了 Graph View 生成的机器 Markdown 节点都属于 Projection。机器可视化 Markdown 应处于明确的 generated / Projection 区域并允许整批删除后从 Authority 重建。具体目录名、SQLite 路径、schema、字段名和 migration 机制由后续 Spec / 版本规划确定，不改变上述 ownership 约束。
 
+## 已有 Obsidian Vault 接入
+
+已有 Obsidian Vault 默认原地接入，不要求复制到新的 Akira 专用 Vault。接入首先进行只读盘点，识别 Markdown、Properties、links、Bases、附件和现有目录结构；在用户明确 Knowledge 管理范围之前，不移动、重命名、改写正文、重排 frontmatter、批量改标签或重构目录。一个 Vault 可以长期同时包含 Knowledge-managed 内容与普通 Obsidian 内容，未注册 Markdown 不会仅因为存在于 Vault 中就自动成为材料记录或知识资产。
+
+用户确认管理范围后，已有长期 Markdown 通过原地注册进入 Knowledge：保留原路径、正文、wikilink、Properties 与用户组织方式，只补充 Knowledge 必需且 ownership 已明确的最小机器 metadata，例如 stable identity 与 object kind。对一个已批准范围内的确定性 identity 注入可以批量执行，无需逐篇确认，但仍必须满足 round-trip safety。已有 Properties、tags 与 links 默认保留原语义，不因字段名相似或被 Knowledge 接入就自动映射为工作流状态、对象类别或 typed relation。
+
+只有当内容当前不属于目标 Vault，而用户明确要求把它纳入目标 Vault 时，才属于 import；已有 Vault 的原地接管属于 bootstrap / registration，不是 import。0.x 后续 migration 只允许迁移 Akira Knowledge 自己拥有的 schema、字段、结构化 machine store 或可重建 Projection；版本升级不得借 migration 批量改写用户正文、标题、目录、普通链接或其他人类语义。新增索引、embedding、Bases、graph cache 或 relation type 应优先通过增量结构化扩展或 Projection 重建实现，避免反复迁移人类 Markdown。
+
 ## 派生投影（Projection）
 
 表示从 Authority 或具有明确 lineage 的上游信息派生出的可重建表示，例如 Obsidian Bases、全文索引、embedding、graph cache、ranking、generated context view，以及为了 Obsidian 图谱可视化而生成的机器可视化 Markdown 节点。Projection 可以持久化，也可以通过明确映射的界面操作请求修改对应 Authority，但其自身不得成为第二套可编辑真相；丢失或过期 Projection 不得造成 canonical knowledge 丢失。
