@@ -1,6 +1,6 @@
 ---
 name: akira-knowledge
-description: 管理显式、持久、可检查、可更新和可复用的长期知识；当前 0.1 实现从 Obsidian Vault bootstrap / registration 开始，并逐步路由 capture、curate、retrieve 与 maintain 工作流。
+description: 管理显式、持久、可检查、可更新和可复用的长期知识；0.1.x 已闭合 Obsidian Vault bootstrap、capture、curate、retrieve 与 revision-safe maintain 基础 Knowledge Loop。
 disable-model-invocation: true
 ---
 
@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-当前 `0.1.x` 已实现 Vault bootstrap / registration、显式 Capture、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval，以及既有知识的 revision-safe update。系统性长期 Review、主动陈旧/冲突候选与最终 0.1.x 发布门禁仍属于后续版本/门禁；不得把这些缺失能力伪装成已完成，也不得自行用临时 Markdown/SQLite 操作绕过 owning Skill。
+当前 `0.1.x` 已实现 Vault bootstrap / registration、显式 Capture、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval，以及既有知识的 revision-safe update，并已通过 `docs/validation/0.1-release-gate.md` 所记录的发布就绪黑盒门禁。系统性长期 Review、主动陈旧/冲突候选等能力仍按 0.x 路线图延期到后续版本；不得把这些延期能力伪装成 0.1.x 已实现，也不得自行用临时 Markdown/SQLite 操作绕过 owning Skill。通过当前门禁不等于已经完成 GitHub tag / release 或远端安装发布。

@@ -1,6 +1,6 @@
 # Repository instructions
 
-本仓库是 `Akira-TL/akira-knowledge-skills` 的 canonical source，维护 Akira Knowledge 产品。0.x.x Wayfinder 已完成，当前按 `docs/roadmap/0x-series.md` 从 `0.1.x` 开始实现。已经落地的 Skill / script 只描述其真实完成的纵向切片；尚未完成的后续能力不得因路线图或 Spec 已存在就描述成已实现。
+本仓库是 `Akira-TL/akira-knowledge-skills` 的 canonical source，维护 Akira Knowledge 产品。0.x.x Wayfinder 已完成；`0.1.x` 基础 Knowledge Loop 已实现并通过发布就绪黑盒门禁，后续继续按 `docs/roadmap/0x-series.md` 推进。已经落地的 Skill / script 只描述其真实完成的版本能力；尚未完成的后续能力不得因路线图或 Spec 已存在就描述成已实现。
 
 ## 产品边界
 
@@ -28,7 +28,7 @@ Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知�
 
 ## 仓库与发布
 
-- `akira-knowledge` 已进入 `0.1.x` 实现，但在 0.1.x 发布门禁通过前不视为稳定发布；README 和用户回复不得生成未经发布流程确认的远端安装命令。
+- `akira-knowledge` 的 `0.1.x` 实现已通过发布就绪门禁，但尚未完成 GitHub tag / release；README 和用户回复不得把当前仓库状态描述成已经发布的稳定版本，也不得生成未经发布流程确认的远端安装命令。
 - 不默认添加 package metadata、CI、marketplace、release automation 或 License；这些都需要独立决策。
 - 正式提交遵守 Akira 全局 Git 规则与 Guard 提交入口。
 - 未来接入 Lattice 时，Lattice 只固定本仓 revision，不作为运行时 Skill source。
