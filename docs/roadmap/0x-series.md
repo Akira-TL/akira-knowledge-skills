@@ -82,3 +82,19 @@
 `可靠形成知识 → 可靠找回知识 → 利用机器关系 → 系统维护长期知识 → 按证据增强语义检索 → 规模化与可靠性 → 1.0 稳定化`
 
 图谱与 typed relation 机制虽然属于共同产品基线，但完整产品能力不排在基础检索之前；向量与其他语义增强也不得先于可解释、可降级的基础 Retrieval Contract。
+
+## Wayfinder 完成与分版本 Spec handoff
+
+0.x Wayfinder 在以下条件同时满足时完成：共同产品基线已经闭合；0.x 能力版图、minor 切分、版本依赖和延期原则已经明确；Map 中不存在仍会改变领域对象、Authority / Projection、修改治理、identity / revision、持久化职责、Obsidian 边界、Skill ownership 或版本主依赖顺序的重大开放问题。Wayfinder 完成只表示产品规划足以进入规格化，不要求任何版本已经实现或运行端到端 Demo。
+
+Wayfinder 完成后，各 minor 独立进入 `to-spec`，不一次性冻结整个 0.x 的实现细节。一个 minor 进入 `to-spec` 前必须明确六项内容：用户价值、包含范围、明确延期、上游依赖、兼容 / migration 边界，以及能够证明该版本成立的端到端用户验收场景。若这些内容仍需要 Spec 作者重新决定产品语义，则该 minor 尚未满足 handoff 条件。
+
+各阶段至少使用以下主路径作为产品级验收意图：`0.1.x` 覆盖捕获 → 材料记录 → 整理 → 用户批准 → 知识资产 → 基础找回；`0.2.x` 覆盖当前任务 → 检索 → 说明召回依据 → 回读 Authority → 使用；`0.3.x` 覆盖关系候选 → 治理 → typed relation → traversal / Graph View；`0.4.x` 覆盖发现陈旧或冲突 → Review → 修订提案 → 批准 → 更新 / 退役；`0.5.x` 覆盖基础检索评测不足 → 选择最小增强 → 可验证改善且仍可降级；`0.6.x` 覆盖大 Vault、Projection 损坏或 migration → 恢复并保持 Authority；`0.9.x` 覆盖升级、恢复、完整 Skill 路由和数据兼容性 → 满足 1.0 稳定候选。
+
+每个进入 `to-spec` 的版本还必须能解释关键失败路径，而 Wayfinder 不要求现在执行这些测试：用户拒绝人类内容修改时 Authority 不变；执行前 revision 已变化且影响本次修改时 fail closed 并重新提案；Obsidian CLI 不可用且没有经过验证的语义等价 fallback 时停止；Projection 损坏不得造成 Authority 丢失；已有 Vault 的未知字段和无关正文不得被顺带改写；migration 不得留下半迁移 Authority；语义相似不得自动 merge identity；模型发现的关系不得自动升级为 typed relation。
+
+不会改变既有产品合同的工程选择留给 `to-spec` 和实现，包括稳定 ID 的具体编码、frontmatter 字段名、SQLite schema / 表名、目录名、migration 文件格式、CLI 调用细节、检索 backend、索引实现、具体 embedding / reranker、性能阈值、错误码和测试 fixture。
+
+`0.5.x` 是明确的证据门：其能力位置已经规划为语义检索增强，但具体增强技术只有在 `0.1.x`–`0.4.x` 的真实使用或 retrieval evaluation 暴露具体失败模式后才进入详细 `to-spec`；路线图不预先要求独立 vector DB。`0.7.x` / `0.8.x` 没有真实新能力域时不创建对应 Spec。`0.9.x` 当前只冻结“1.0 稳定化、不增加大型能力域”的职责，最终详细 Spec 必须依据前序版本的真实兼容、migration、恢复和长期使用证据形成。
+
+因此 0.x Wayfinder 结束后，下一步从 `0.1.x` 进入 `to-spec`；后续 minor 在各自进入条件满足时分别 handoff。真实实现证据可以触发受控路线图修订，但不得在 Spec 或实现阶段静默改变已经接受的共同产品合同。
