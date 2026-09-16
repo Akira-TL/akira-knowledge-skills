@@ -10,7 +10,7 @@ Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知�
 - 当前任务上下文由项目与 Agent harness 的 Context 机制拥有；Knowledge 不复制会话上下文。
 - Agent harness 的 Memory 属于运行时个性化能力；Knowledge 不冒充或替代运行时 Memory。
 
-计划中的 Primary Router 名称为 `akira-knowledge`。在用户确认核心对象模型之前，只保留该名称与产品边界，不提前固定 `Source`、`Note`、`Concept`、`Collection`、`Review` 等内部对象或 Skill。
+v0.1 的 Primary Router 为 `akira-knowledge`，主要用户入口保持单一。领域工作流按用户意图与知识生命周期拆为 `knowledge-capture`、`knowledge-curate`、`knowledge-retrieve`、`knowledge-maintain`；Skill 拥有行为契约而不拥有领域对象。Obsidian Markdown、Bases 与 CLI 等通用操作能力优先复用 `kepano/obsidian-skills`，本仓不重复建立 `knowledge-obsidian` 底层 Skill。
 
 ## Skill 编写
 
