@@ -105,7 +105,17 @@ def register_notes(
                 f"Approved note is outside approved management scopes: {locator}"
             )
 
-    storage.read_config(root)  # Fail closed on an invalid pre-existing config before mutation.
+    existing_config = storage.read_config(root)  # Fail closed on invalid pre-existing config.
+    database_exists = storage.db_path(root).exists()
+    if existing_config is not None and not database_exists:
+        raise BootstrapError(
+            "Knowledge structured Authority store is missing from an already bootstrapped Vault"
+        )
+    if existing_config is None and database_exists:
+        raise BootstrapError(
+            "Knowledge structured Authority store exists without its Vault configuration"
+        )
+
     sys_dir = storage.system_dir(root)
     if sys_dir.exists() and not sys_dir.is_dir():
         raise BootstrapError(f"{storage.SYSTEM_DIR} exists but is not a directory")

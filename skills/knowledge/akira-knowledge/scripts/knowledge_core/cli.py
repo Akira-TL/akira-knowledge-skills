@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sqlite3
 import sys
 
 from knowledge_core.service import (
@@ -20,6 +21,7 @@ from knowledge_core.service import (
     retrieve_full_text,
     synchronize_object,
 )
+from knowledge_core.storage import StorageError
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -199,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,
             )
-    except (BootstrapError, OSError, ValueError) as exc:
+    except (BootstrapError, StorageError, sqlite3.DatabaseError, OSError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2
 
