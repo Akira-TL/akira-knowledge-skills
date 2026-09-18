@@ -10,6 +10,7 @@ from knowledge_core.workflows.retrieve import (
 )
 from knowledge_core.workflows.maintain import apply_update_proposal, synchronize_object
 from knowledge_core.workflows.retrieval_plan import retrieve_task_package
+from knowledge_core.workflows.projections.views import rebuild_dynamic_views
 
 __all__ = [
     "BootstrapError",
@@ -25,5 +26,6 @@ __all__ = [
     "retrieve_filter",
     "retrieve_full_text",
     "retrieve_task_package",
+    "rebuild_dynamic_views",
     "synchronize_object",
 ]

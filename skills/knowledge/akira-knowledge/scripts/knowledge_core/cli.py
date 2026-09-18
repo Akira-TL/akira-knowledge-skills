@@ -13,6 +13,7 @@ from knowledge_core.service import (
     capture_material,
     create_curate_proposal,
     inspect_vault,
+    rebuild_dynamic_views,
     rebuild_full_text_projection,
     register_notes,
     reject_curate_proposal,
@@ -143,6 +144,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     rebuild_parser.add_argument("--vault", required=True, type=Path)
 
+    views_parser = subparsers.add_parser(
+        "views-rebuild", help="Rebuild Akira Knowledge Obsidian Bases Projection"
+    )
+    views_parser.add_argument("--vault", required=True, type=Path)
+
     sync_parser = subparsers.add_parser(
         "maintain-sync", help="Synchronize current locator/fingerprint into the revision ledger"
     )
@@ -261,6 +267,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "retrieve-rebuild-index":
             payload = rebuild_full_text_projection(args.vault)
+        elif args.command == "views-rebuild":
+            payload = rebuild_dynamic_views(args.vault)
         elif args.command == "maintain-sync":
             payload = synchronize_object(args.vault, identity=args.identity)
         else:

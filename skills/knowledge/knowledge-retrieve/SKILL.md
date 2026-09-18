@@ -104,7 +104,22 @@ relation seed 与被扩展对象都受当前 Retrieval Scope 约束；默认 `cu
 
 `0.2.x` 没有 relation create / accept / edit 用户命令；无 accepted Relation Record 时 relation path 正常返回空结果。relation candidate、关系治理与 ontology 扩展仍属于 `0.3.x`。
 
-## 7. 结果合同
+## 7. Obsidian Bases 动态视图
+
+用户要在 Obsidian 中浏览当前知识与材料集合时，`knowledge-retrieve` 可以重建 Akira Knowledge 自有的 Bases Projection：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py views-rebuild \
+  --vault <vault>
+```
+
+该命令生成一个官方 `.base` YAML 配置，其中至少包含 `Current Knowledge` 与 `Materials` 两个 table view，分别依据 `akira_knowledge_kind` 过滤当前 Knowledge Asset 与 Material Record；材料视图可以显示 `akira_knowledge_status`。这些字段仍由各自既有 Authority / Projection 合同拥有，`.base` 文件只保存筛选与展示配置。
+
+视图目录带有 Akira ownership marker。只有已确认属于 Akira Knowledge 的 Projection 目录可以覆盖重建；同名但没有 marker 的用户目录必须 fail closed。用户删除或损坏已拥有的 `.base` 文件后可以重新生成，重建不得修改 Markdown、对象状态、relation、provenance 或 revision ledger。
+
+当前没有 `retired` 等生命周期 Authority 时，不生成虚构 retired 视图。该 `.base` 文件是普通可重建本地配置，不需要 Obsidian 特有 link-aware mutation；后续若视图操作真正依赖 Obsidian 运行时语义，再按 Router 的官方 CLI / 上游 Skill 边界处理。
+
+## 8. 结果合同
 
 每条检索结果至少包含：
 
@@ -117,8 +132,8 @@ relation seed 与被扩展对象都受当前 Retrieval Scope 约束；默认 `cu
 
 结果外层同时返回本次实际使用的 `scope`，让调用方可以检查对象为什么有资格进入本次检索。`0.2.x` 仍不提供统一 relevance score，也不把召回、排序或相似度解释成新的知识语义。
 
-## 8. 完成与停止边界
+## 9. 完成与停止边界
 
 检索完成时必须能够从结果回到当前 Authority，并明确说明命中依据。以下情况 fail closed：stable identity 在 registry 存在但当前管理范围中无法解析对应 Markdown、发现同一 stable identity 对应多个 Markdown、Markdown object kind 与结构化 registry 冲突、结构化 Authority store 本身不可读取。
 
-当前已完成统一 Retrieval Scope、任务相关知识集合与 accepted typed relation 的只读方向扩展；Bases 动态视图仍是 `0.2.x` 后续实现票。向量检索、rerank 与 graph ranking 不属于 `0.2.x`。
+当前已完成统一 Retrieval Scope、任务相关知识集合、accepted typed relation 的只读方向扩展与 Obsidian Bases 动态视图。完整 0.2 用户闭环与升级兼容门禁仍由后续票完成；向量检索、rerank 与 graph ranking 不属于 `0.2.x`。

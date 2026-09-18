@@ -14,7 +14,7 @@ disable-model-invocation: true
 
 - 明确要求长期保存、记下或加入知识库 → `knowledge-capture`；
 - 要把材料整理、提炼、综合成长期知识，或为既有知识形成语义修改提案 → `knowledge-curate`；
-- 要查找、筛选、全文搜索或按 stable identity 找回已有知识 → `knowledge-retrieve`；
+- 要查找、筛选、全文搜索、按 stable identity 找回已有知识，或浏览当前知识 / 材料动态视图 → `knowledge-retrieve`；
 - 要同步用户在 Obsidian 中的直接 edit / move / rename，或执行已经批准的既有知识更新 → `knowledge-maintain`。
 
 一个请求跨越多个阶段时，Router 在 owning Skill 完成其有边界动作后重新判断下一意图。例如“把这段保存并整理成知识”先 Capture 得到材料记录，再进入 Curate；不能让 Capture 直接越权创建长期知识正文。
@@ -66,7 +66,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 6. 路由到 Retrieval
 
-用户要按 stable identity 找回对象、按 Authority 属性筛选、检索当前 Markdown 正文，或希望“为当前任务取得相关知识”时，路由到 sibling `knowledge-retrieve` Skill。`0.2.x` 的基础检索默认只进入当前知识资产范围；用户明确需要材料记录时由 Retrieval 使用显式 scope 扩大本次请求范围。对于当前任务，Router / 当前 Agent 只负责把自然语言任务解释成显式、可检查的 retrieval plan，再交给 `knowledge-retrieve` 执行；计划可以组合 Exact / Filter / Full-text，并可沿已存在的 accepted Relation Record 做显式方向扩展。任务描述和 retrieval package 不成为新的 Knowledge 对象、Context 或 Memory。Router 不通过修改对象状态来表达 scope，也不把普通 wikilink、tag 或模型相似度升级为 typed relation。Retrieval 对 Authority 保持只读；全文索引等可重建 Projection 可以机械刷新，但不能因为命中结果自动添加标签、链接、关系、权重或改写正文。
+用户要按 stable identity 找回对象、按 Authority 属性筛选、检索当前 Markdown 正文、希望“为当前任务取得相关知识”，或要在 Obsidian 中浏览当前知识 / 材料动态视图时，路由到 sibling `knowledge-retrieve` Skill。`0.2.x` 的基础检索默认只进入当前知识资产范围；用户明确需要材料记录时由 Retrieval 使用显式 scope 扩大本次请求范围。对于当前任务，Router / 当前 Agent 只负责把自然语言任务解释成显式、可检查的 retrieval plan，再交给 `knowledge-retrieve` 执行；计划可以组合 Exact / Filter / Full-text，并可沿已存在的 accepted Relation Record 做显式方向扩展。任务描述和 retrieval package 不成为新的 Knowledge 对象、Context 或 Memory。Obsidian Bases 只作为可重建浏览 Projection，不拥有对象状态或正文 Authority。Router 不通过修改对象状态来表达 scope，也不把普通 wikilink、tag 或模型相似度升级为 typed relation。Retrieval 对 Authority 保持只读；全文索引与动态视图等可重建 Projection 可以机械刷新，但不能因为命中结果或展示方式自动添加标签、链接、关系、权重或改写正文。
 
 ## 7. 路由到 Maintenance
 
@@ -78,8 +78,8 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 真正依赖 Vault 语义的写操作，例如需要 Obsidian 自身处理链接或 Vault 状态的操作，优先复用 `kepano/obsidian-skills` 的 `obsidian-cli` 能力并使用执行时官方 CLI。官方 CLI 不可用时，只有该具体操作已经证明存在语义等价且满足 round-trip safety 的 filesystem fallback 才能继续，否则 fail closed。
 
-当前 `0.1.x` 已实现的 registration、Capture、新建知识资产与正文 body replacement 都是普通本地文件层操作，并分别通过 round-trip / Authority 黑盒测试验证，不依赖 Obsidian 特有的 link-aware move/rename 语义；因此这些路径可以直接使用共享的原子文件写入。当前版本不由 Knowledge 主动执行需要 Obsidian 语义的 rename / move；用户在 Obsidian 中发生的 move / rename 由 Maintenance 重新解析和同步。
+当前已实现的 registration、Capture、新建知识资产、正文 body replacement，以及 `0.2.x` 的 `.base` Projection 生成，都是普通本地文件层操作，并分别通过 round-trip / Authority 黑盒测试验证，不依赖 Obsidian 特有的 link-aware move/rename 语义；因此这些路径可以直接使用共享的原子文件写入。当前版本不由 Knowledge 主动执行需要 Obsidian 语义的 rename / move；用户在 Obsidian 中发生的 move / rename 由 Maintenance 重新解析和同步。
 
 ## 9. 当前实现边界
 
-`0.1.x` 基础 Knowledge Loop 已实现并通过 `docs/validation/0.1-release-gate.md` 所记录的发布就绪黑盒门禁。`0.2.x` 当前已经开始扩展 Retrieval + Views，其中 Exact / Filter / Full-text 已统一使用调用时 Retrieval Scope，并已支持任务相关知识集合与 accepted typed relation 的只读方向扩展；Obsidian 动态视图仍由后续 0.2 实现票完成。系统性长期 Review、主动陈旧/冲突候选等能力继续按路线图延期；不得把这些未完成能力描述为已经实现。通过 0.1 门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop 已实现并通过 `docs/validation/0.1-release-gate.md` 所记录的发布就绪黑盒门禁。`0.2.x` 当前已经完成 Retrieval Scope、任务相关知识集合、accepted typed relation 的只读方向扩展与 Obsidian Bases 动态视图；完整 0.2 用户闭环与升级兼容门禁仍由后续票完成。系统性长期 Review、主动陈旧/冲突候选等能力继续按路线图延期；不得把这些未完成能力描述为已经实现。通过 0.1 门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
