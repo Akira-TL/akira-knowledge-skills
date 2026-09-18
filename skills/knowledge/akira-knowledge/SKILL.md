@@ -1,6 +1,6 @@
 ---
 name: akira-knowledge
-description: 管理显式、持久、可检查、可更新和可复用的长期知识；0.1.x 基础 Knowledge Loop 已闭合，0.2.x 正在扩展带显式检索范围的 Retrieval + Views。
+description: 管理显式、持久、可检查、可更新和可复用的长期知识；0.1.x 基础 Knowledge Loop 与 0.2.x Retrieval + Views 均已闭合并通过发布就绪门禁。
 disable-model-invocation: true
 ---
 
@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-`0.1.x` 基础 Knowledge Loop 已实现并通过 `docs/validation/0.1-release-gate.md` 所记录的发布就绪黑盒门禁。`0.2.x` 当前已经完成 Retrieval Scope、任务相关知识集合、accepted typed relation 的只读方向扩展与 Obsidian Bases 动态视图；完整 0.2 用户闭环与升级兼容门禁仍由后续票完成。系统性长期 Review、主动陈旧/冲突候选等能力继续按路线图延期；不得把这些未完成能力描述为已经实现。通过 0.1 门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现，并分别通过 `docs/validation/0.1-release-gate.md` 与 `docs/validation/0.2-release-gate.md` 所记录的发布就绪黑盒门禁。`0.2.x` 已闭合 Retrieval Scope、任务相关知识集合、accepted typed relation 的只读方向扩展、Obsidian Bases 动态视图、完整用户闭环与 0.1 → 0.2 原地升级兼容。系统性长期 Review、主动陈旧/冲突候选等能力继续按路线图延期；不得把这些未完成能力描述为已经实现。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。

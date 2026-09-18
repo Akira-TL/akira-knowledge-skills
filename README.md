@@ -2,7 +2,7 @@
 
 `Akira-TL/akira-knowledge-skills` 是 Akira Knowledge 的 canonical source，用于维护长期知识管理相关的 Skill、文档与配套实现。
 
-0.x.x 产品规划已经完成，`0.1.x` 基础 Knowledge Loop 已实现并通过发布就绪黑盒门禁。Primary Router 为 `akira-knowledge`；当前实现尚未执行 GitHub tag / release，因此不等同于已经发布的稳定版本。
+0.x.x 产品规划已经完成，`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现并通过发布就绪黑盒门禁。Primary Router 为 `akira-knowledge`；当前实现尚未执行 GitHub tag / release，因此不等同于已经发布的稳定版本。
 
 ## 产品边界
 
@@ -22,7 +22,7 @@ Akira Knowledge 面向显式、持久、可检查、可更新和可复用的知�
 - Primary Router：`akira-knowledge`。
 - 0.x Wayfinder：已完成。
 - 0.1.x：实现完成，发布就绪门禁已通过。
-- 0.2.x：实现中；已完成统一 Retrieval Scope、任务相关知识集合、accepted typed relation 的只读方向扩展与 Obsidian Bases 动态视图，后续继续闭合完整 0.2 用户路径与升级兼容门禁。
+- 0.2.x：实现完成，独立黑盒与升级兼容门禁已通过。
 - 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础、显式 Capture 到材料记录、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval、既有知识 revision-safe update、显式 Retrieval Scope、按 stable identity 去重并保留多路径命中依据的任务相关知识集合、只消费结构化 Relation Record 的有方向关系扩展，以及可删除重建且不拥有 Authority 的 Obsidian Bases 动态视图。
 - 发布状态：尚未创建 GitHub tag / release，也未执行远端安装发布。
 
@@ -34,4 +34,4 @@ Akira Knowledge 面向显式、持久、可检查、可更新和可复用的知�
 ./scripts/check.sh
 ```
 
-发布就绪验收证据见 [`docs/validation/0.1-release-gate.md`](docs/validation/0.1-release-gate.md)。在实际 GitHub tag / release 完成前，不把当前实现描述为已经发布的稳定版本，也不生成未经发布流程确认的远端安装命令。
+发布就绪验收证据见 [`docs/validation/0.1-release-gate.md`](docs/validation/0.1-release-gate.md) 与 [`docs/validation/0.2-release-gate.md`](docs/validation/0.2-release-gate.md)。在实际 GitHub tag / release 完成前，不把当前实现描述为已经发布的稳定版本，也不生成未经发布流程确认的远端安装命令。

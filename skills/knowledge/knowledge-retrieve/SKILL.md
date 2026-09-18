@@ -136,4 +136,4 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py views-rebuild \
 
 检索完成时必须能够从结果回到当前 Authority，并明确说明命中依据。以下情况 fail closed：stable identity 在 registry 存在但当前管理范围中无法解析对应 Markdown、发现同一 stable identity 对应多个 Markdown、Markdown object kind 与结构化 registry 冲突、结构化 Authority store 本身不可读取。
 
-当前已完成统一 Retrieval Scope、任务相关知识集合、accepted typed relation 的只读方向扩展与 Obsidian Bases 动态视图。完整 0.2 用户闭环与升级兼容门禁仍由后续票完成；向量检索、rerank 与 graph ranking 不属于 `0.2.x`。
+`0.2.x` 的统一 Retrieval Scope、任务相关知识集合、accepted typed relation 只读方向扩展、Obsidian Bases 动态视图、完整用户闭环与升级兼容门禁均已完成并通过独立黑盒验收。向量检索、rerank 与 graph ranking 不属于 `0.2.x`。
