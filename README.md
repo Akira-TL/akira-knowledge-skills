@@ -22,7 +22,8 @@ Akira Knowledge 面向显式、持久、可检查、可更新和可复用的知�
 - Primary Router：`akira-knowledge`。
 - 0.x Wayfinder：已完成。
 - 0.1.x：实现完成，发布就绪门禁已通过。
-- 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础、显式 Capture 到材料记录、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval、既有知识 revision-safe update，以及通过 `akira-knowledge` 单一入口串联四个领域工作流的完整 0.1.x Knowledge Loop。
+- 0.2.x：实现中；已完成统一 Retrieval Scope 与任务相关知识集合，后续继续实现 typed relation 只读扩展、Obsidian 动态视图与完整 0.2 闭环。
+- 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础、显式 Capture 到材料记录、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval、既有知识 revision-safe update、显式 Retrieval Scope，以及按 stable identity 去重并保留多路径命中依据的任务相关知识集合。
 - 发布状态：尚未创建 GitHub tag / release，也未执行远端安装发布。
 
 ## Development

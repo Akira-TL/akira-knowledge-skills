@@ -66,7 +66,26 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-rebuild
 
 重建只允许删除并重建检索 Projection，不得删除或重建 SQLite 中的结构化 Authority。
 
-## 5. 结果合同
+## 5. 任务相关知识集合
+
+当用户希望“为当前任务取知识”时，当前 Agent 先把任务解释为显式检索计划，再调用共享执行入口：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-task \
+  --vault <vault> \
+  --task <current-task-description> \
+  --scope current \
+  --exact <optional-stable-identity> \
+  --kind knowledge_asset \
+  --property <key=value> \
+  --query <optional-full-text-query>
+```
+
+`--exact` 与 `--query` 可以重复；Filter 路径由 `--kind`、`--status` 或 `--property` 中至少一项启用。确定性后端只执行已经显式给出的路径，不把任务描述本身当作隐藏搜索条件，也不自行从自然语言推断新的标签、关系或相关性 Authority。
+
+任务相关结果按 `stable_identity` 去重；同一对象被多条路径命中时，保留每条真实 `matched_evidence`、`retrieval_reason` 与路径类型。返回的 `retrieval_plan`、任务描述与结果集合只存在于本次调用，不获得 Knowledge identity，不写入新的 Knowledge 对象，也不成为 Agent 当前任务 Context 或 Memory 的 Authority。
+
+## 6. 结果合同
 
 每条检索结果至少包含：
 
@@ -79,8 +98,8 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-rebuild
 
 结果外层同时返回本次实际使用的 `scope`，让调用方可以检查对象为什么有资格进入本次检索。`0.2.x` 仍不提供统一 relevance score，也不把召回、排序或相似度解释成新的知识语义。
 
-## 6. 完成与停止边界
+## 7. 完成与停止边界
 
 检索完成时必须能够从结果回到当前 Authority，并明确说明命中依据。以下情况 fail closed：stable identity 在 registry 存在但当前管理范围中无法解析对应 Markdown、发现同一 stable identity 对应多个 Markdown、Markdown object kind 与结构化 registry 冲突、结构化 Authority store 本身不可读取。
 
-当前已完成统一 Retrieval Scope；任务相关知识集合、typed relation 只读 traversal 与 Bases 动态视图仍是 `0.2.x` 后续实现票。向量检索、rerank 与 graph ranking 不属于 `0.2.x`。
+当前已完成统一 Retrieval Scope 与任务相关知识集合；typed relation 只读 traversal 与 Bases 动态视图仍是 `0.2.x` 后续实现票。向量检索、rerank 与 graph ranking 不属于 `0.2.x`。

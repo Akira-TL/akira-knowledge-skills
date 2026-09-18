@@ -9,6 +9,7 @@ from knowledge_core.workflows.retrieve import (
     retrieve_full_text,
 )
 from knowledge_core.workflows.maintain import apply_update_proposal, synchronize_object
+from knowledge_core.workflows.retrieval_plan import retrieve_task_package
 
 __all__ = [
     "BootstrapError",
@@ -23,5 +24,6 @@ __all__ = [
     "retrieve_exact",
     "retrieve_filter",
     "retrieve_full_text",
+    "retrieve_task_package",
     "synchronize_object",
 ]

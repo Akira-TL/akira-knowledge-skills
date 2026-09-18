@@ -19,6 +19,7 @@ from knowledge_core.service import (
     retrieve_exact,
     retrieve_filter,
     retrieve_full_text,
+    retrieve_task_package,
     synchronize_object,
 )
 from knowledge_core.storage import StorageError
@@ -113,6 +114,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Retrieval scope; repeat to combine current and material. Defaults to current.",
     )
 
+    task_parser = subparsers.add_parser(
+        "retrieve-task", help="Execute an explicit task-related Retrieval Plan"
+    )
+    task_parser.add_argument("--vault", required=True, type=Path)
+    task_parser.add_argument("--task", required=True)
+    task_parser.add_argument(
+        "--scope",
+        action="append",
+        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+    )
+    task_parser.add_argument("--exact", action="append", default=[])
+    task_parser.add_argument("--query", action="append", default=[])
+    task_parser.add_argument("--kind")
+    task_parser.add_argument("--status")
+    task_parser.add_argument(
+        "--property",
+        action="append",
+        default=[],
+        help="Filter-path top-level Authority property as key=value",
+    )
+
     rebuild_parser = subparsers.add_parser(
         "retrieve-rebuild-index", help="Explicitly rebuild the full-text search Projection"
     )
@@ -131,6 +153,20 @@ def build_parser() -> argparse.ArgumentParser:
     update_parser.add_argument("--proposal-id", required=True)
     update_parser.add_argument("--confirmed-approval", action="store_true")
     return parser
+
+
+def _parse_property_filters(items: list[str]) -> dict[str, str]:
+    property_filters: dict[str, str] = {}
+    for item in items:
+        if "=" not in item:
+            raise BootstrapError("Property filter must use key=value syntax")
+        key, value = item.split("=", 1)
+        if not key:
+            raise BootstrapError("Property filter key must not be empty")
+        if key in property_filters:
+            raise BootstrapError(f"Duplicate property filter: {key}")
+        property_filters[key] = value
+    return property_filters
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,16 +228,7 @@ def main(argv: list[str] | None = None) -> int:
                 scopes=args.scope,
             )
         elif args.command == "retrieve-filter":
-            property_filters: dict[str, str] = {}
-            for item in args.property:
-                if "=" not in item:
-                    raise BootstrapError("Property filter must use key=value syntax")
-                key, value = item.split("=", 1)
-                if not key:
-                    raise BootstrapError("Property filter key must not be empty")
-                if key in property_filters:
-                    raise BootstrapError(f"Duplicate property filter: {key}")
-                property_filters[key] = value
+            property_filters = _parse_property_filters(args.property)
             payload = retrieve_filter(
                 args.vault,
                 kind=args.kind,
@@ -214,6 +241,17 @@ def main(argv: list[str] | None = None) -> int:
                 args.vault,
                 query=args.query,
                 scopes=args.scope,
+            )
+        elif args.command == "retrieve-task":
+            payload = retrieve_task_package(
+                args.vault,
+                task=args.task,
+                scopes=args.scope,
+                exact_identities=args.exact,
+                full_text_queries=args.query,
+                filter_kind=args.kind,
+                filter_status=args.status,
+                filter_properties=_parse_property_filters(args.property),
             )
         elif args.command == "retrieve-rebuild-index":
             payload = rebuild_full_text_projection(args.vault)
