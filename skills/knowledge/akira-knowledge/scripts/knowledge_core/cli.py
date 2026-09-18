@@ -78,6 +78,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     exact_parser.add_argument("--vault", required=True, type=Path)
     exact_parser.add_argument("--identity", required=True)
+    exact_parser.add_argument(
+        "--scope",
+        action="append",
+        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+    )
 
     filter_parser = subparsers.add_parser(
         "retrieve-filter", help="Filter current Knowledge objects by authoritative properties"
@@ -85,6 +90,11 @@ def build_parser() -> argparse.ArgumentParser:
     filter_parser.add_argument("--vault", required=True, type=Path)
     filter_parser.add_argument("--kind")
     filter_parser.add_argument("--status")
+    filter_parser.add_argument(
+        "--scope",
+        action="append",
+        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+    )
     filter_parser.add_argument(
         "--property",
         action="append",
@@ -97,6 +107,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     full_text_parser.add_argument("--vault", required=True, type=Path)
     full_text_parser.add_argument("--query", required=True)
+    full_text_parser.add_argument(
+        "--scope",
+        action="append",
+        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+    )
 
     rebuild_parser = subparsers.add_parser(
         "retrieve-rebuild-index", help="Explicitly rebuild the full-text search Projection"
@@ -171,7 +186,11 @@ def main(argv: list[str] | None = None) -> int:
                 confirmed_rejection=args.confirmed_rejection,
             )
         elif args.command == "retrieve-exact":
-            payload = retrieve_exact(args.vault, identity=args.identity)
+            payload = retrieve_exact(
+                args.vault,
+                identity=args.identity,
+                scopes=args.scope,
+            )
         elif args.command == "retrieve-filter":
             property_filters: dict[str, str] = {}
             for item in args.property:
@@ -188,9 +207,14 @@ def main(argv: list[str] | None = None) -> int:
                 kind=args.kind,
                 status=args.status,
                 properties=property_filters,
+                scopes=args.scope,
             )
         elif args.command == "retrieve-full-text":
-            payload = retrieve_full_text(args.vault, query=args.query)
+            payload = retrieve_full_text(
+                args.vault,
+                query=args.query,
+                scopes=args.scope,
+            )
         elif args.command == "retrieve-rebuild-index":
             payload = rebuild_full_text_projection(args.vault)
         elif args.command == "maintain-sync":

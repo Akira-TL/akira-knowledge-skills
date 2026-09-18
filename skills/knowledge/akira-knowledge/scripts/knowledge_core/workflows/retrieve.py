@@ -2,12 +2,42 @@ from __future__ import annotations
 
 from pathlib import Path
 import sqlite3
-from typing import Mapping
+from typing import Mapping, Sequence
 
 from knowledge_core import storage
 from knowledge_core.common import BootstrapError, _vault_root
 from knowledge_core.markdown import AK_ID, AK_KIND, AK_STATUS, searchable_text
 from knowledge_core.resolution import ResolvedObject, resolve_object, resolve_objects
+
+SCOPE_CURRENT = "current"
+SCOPE_MATERIAL = "material"
+_SUPPORTED_SCOPES = (SCOPE_CURRENT, SCOPE_MATERIAL)
+
+
+def _normalize_scopes(scopes: Sequence[str] | None) -> tuple[str, ...]:
+    requested = tuple(dict.fromkeys(scopes or (SCOPE_CURRENT,)))
+    unsupported = [scope for scope in requested if scope not in _SUPPORTED_SCOPES]
+    if unsupported:
+        raise BootstrapError(
+            "Unsupported retrieval scope in 0.2.x: "
+            + ", ".join(unsupported)
+            + "; supported scopes are current and material"
+        )
+    if not requested:
+        raise BootstrapError("Retrieval scope must not be empty")
+    return requested
+
+
+def _scope_allows(obj: ResolvedObject, scopes: Sequence[str]) -> bool:
+    if SCOPE_CURRENT in scopes and obj.kind == "knowledge_asset":
+        return True
+    if SCOPE_MATERIAL in scopes and obj.kind == "material_record":
+        return True
+    return False
+
+
+def _scope_payload(scopes: Sequence[str]) -> list[str]:
+    return list(scopes)
 
 
 def _result(
@@ -26,8 +56,14 @@ def _result(
     }
 
 
-def retrieve_exact(vault: Path, *, identity: str) -> dict[str, object]:
+def retrieve_exact(
+    vault: Path,
+    *,
+    identity: str,
+    scopes: Sequence[str] | None = None,
+) -> dict[str, object]:
     root = _vault_root(vault)
+    normalized_scopes = _normalize_scopes(scopes)
     if not storage.db_path(root).exists():
         raise BootstrapError("Knowledge structured Authority store is missing")
     conn = storage.connect(root)
@@ -35,11 +71,16 @@ def retrieve_exact(vault: Path, *, identity: str) -> dict[str, object]:
         storage.initialize_schema(conn)
         conn.commit()
         obj = resolve_object(root, conn, identity)
+        if not _scope_allows(obj, normalized_scopes):
+            raise BootstrapError(
+                f"Knowledge object is outside requested retrieval scope: {identity}"
+            )
     finally:
         conn.close()
 
     return {
         "vault": str(root),
+        "scope": _scope_payload(normalized_scopes),
         "result": _result(
             obj,
             evidence=f"stable identity {identity}",
@@ -54,8 +95,10 @@ def retrieve_filter(
     kind: str | None,
     status: str | None,
     properties: Mapping[str, str],
+    scopes: Sequence[str] | None = None,
 ) -> dict[str, object]:
     root = _vault_root(vault)
+    normalized_scopes = _normalize_scopes(scopes)
     reserved = {AK_ID, AK_KIND, AK_STATUS}
     conflicting = sorted(reserved.intersection(properties))
     if conflicting:
@@ -76,6 +119,8 @@ def retrieve_filter(
         objects = resolve_objects(root, conn)
         for identity in sorted(objects):
             obj = objects[identity]
+            if not _scope_allows(obj, normalized_scopes):
+                continue
             if kind is not None and obj.kind != kind:
                 continue
             evidence: list[str] = []
@@ -110,7 +155,11 @@ def retrieve_filter(
     finally:
         conn.close()
 
-    return {"vault": str(root), "results": results}
+    return {
+        "vault": str(root),
+        "scope": _scope_payload(normalized_scopes),
+        "results": results,
+    }
 
 
 def _direct_full_text_matches(
@@ -132,8 +181,14 @@ def _direct_full_text_matches(
     return matches
 
 
-def retrieve_full_text(vault: Path, *, query: str) -> dict[str, object]:
+def retrieve_full_text(
+    vault: Path,
+    *,
+    query: str,
+    scopes: Sequence[str] | None = None,
+) -> dict[str, object]:
     root = _vault_root(vault)
+    normalized_scopes = _normalize_scopes(scopes)
     if not query.strip():
         raise BootstrapError("Full-text query must not be empty")
     if not storage.db_path(root).exists():
@@ -167,7 +222,7 @@ def retrieve_full_text(vault: Path, *, query: str) -> dict[str, object]:
         results: list[dict[str, object]] = []
         for identity, evidence in raw_matches:
             obj = objects.get(identity)
-            if obj is None:
+            if obj is None or not _scope_allows(obj, normalized_scopes):
                 continue
             results.append(
                 _result(
@@ -186,6 +241,7 @@ def retrieve_full_text(vault: Path, *, query: str) -> dict[str, object]:
     return {
         "vault": str(root),
         "query": query,
+        "scope": _scope_payload(normalized_scopes),
         "projection_mode": projection_mode,
         "results": results,
     }

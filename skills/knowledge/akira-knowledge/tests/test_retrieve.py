@@ -114,6 +114,7 @@ class RetrievalBlackBoxTests(unittest.TestCase):
         status_result = self.run_cli(
             "retrieve-filter",
             "--vault", str(self.vault),
+            "--scope", "material",
             "--kind", "material_record",
             "--status", "待处理",
         )
@@ -123,6 +124,98 @@ class RetrievalBlackBoxTests(unittest.TestCase):
         self.assertEqual(material["identity"], material_item["stable_identity"])
         self.assertEqual("material_record", material_item["object_kind"])
         self.assertIn("material status=待处理", material_item["matched_evidence"])
+
+    def test_scope_defaults_to_current_and_explicit_material_scope_is_shared(self) -> None:
+        material = self.capture("ScopeMaterialToken")
+
+        with sqlite3.connect(self.database) as conn:
+            before_revisions = dict(conn.execute("SELECT identity, revision FROM objects").fetchall())
+
+        exact_default = self.run_cli(
+            "retrieve-exact",
+            "--vault", str(self.vault),
+            "--identity", material["identity"],
+            expect=2,
+        )
+        self.assertIn("outside requested retrieval scope", exact_default.stderr)
+        exact_material = json.loads(self.run_cli(
+            "retrieve-exact",
+            "--vault", str(self.vault),
+            "--scope", "material",
+            "--identity", material["identity"],
+        ).stdout)
+        self.assertEqual(["material"], exact_material["scope"])
+        self.assertEqual(material["identity"], exact_material["result"]["stable_identity"])
+
+        filter_default = json.loads(self.run_cli(
+            "retrieve-filter",
+            "--vault", str(self.vault),
+            "--kind", "material_record",
+            "--status", "待处理",
+        ).stdout)
+        self.assertEqual(["current"], filter_default["scope"])
+        self.assertEqual([], filter_default["results"])
+        filter_material = json.loads(self.run_cli(
+            "retrieve-filter",
+            "--vault", str(self.vault),
+            "--scope", "material",
+            "--kind", "material_record",
+            "--status", "待处理",
+        ).stdout)
+        self.assertEqual(["material"], filter_material["scope"])
+        self.assertEqual(material["identity"], filter_material["results"][0]["stable_identity"])
+
+        full_text_default = json.loads(self.run_cli(
+            "retrieve-full-text",
+            "--vault", str(self.vault),
+            "--query", "ScopeMaterialToken",
+        ).stdout)
+        self.assertEqual(["current"], full_text_default["scope"])
+        self.assertEqual([], full_text_default["results"])
+        full_text_material = json.loads(self.run_cli(
+            "retrieve-full-text",
+            "--vault", str(self.vault),
+            "--scope", "material",
+            "--query", "ScopeMaterialToken",
+        ).stdout)
+        self.assertEqual(["material"], full_text_material["scope"])
+        self.assertEqual(material["identity"], full_text_material["results"][0]["stable_identity"])
+
+        combined = json.loads(self.run_cli(
+            "retrieve-filter",
+            "--vault", str(self.vault),
+            "--scope", "current",
+            "--scope", "material",
+        ).stdout)
+        self.assertEqual(["current", "material"], combined["scope"])
+        self.assertEqual({self.identity, material["identity"]}, {
+            item["stable_identity"] for item in combined["results"]
+        })
+
+        with sqlite3.connect(self.database) as conn:
+            after_revisions = dict(conn.execute("SELECT identity, revision FROM objects").fetchall())
+        self.assertEqual(before_revisions, after_revisions, "retrieval scope must not advance revisions")
+
+    def test_unsupported_future_lifecycle_scope_fails_without_inventing_state(self) -> None:
+        before = self.seed.read_bytes()
+        with sqlite3.connect(self.database) as conn:
+            before_rows = conn.execute(
+                "SELECT identity, kind, locator, revision, authority_fingerprint FROM objects ORDER BY identity"
+            ).fetchall()
+
+        result = self.run_cli(
+            "retrieve-filter",
+            "--vault", str(self.vault),
+            "--scope", "retired",
+            expect=2,
+        )
+        self.assertIn("Unsupported retrieval scope in 0.2.x: retired", result.stderr)
+        self.assertEqual(before, self.seed.read_bytes())
+        with sqlite3.connect(self.database) as conn:
+            after_rows = conn.execute(
+                "SELECT identity, kind, locator, revision, authority_fingerprint FROM objects ORDER BY identity"
+            ).fetchall()
+        self.assertEqual(before_rows, after_rows)
 
     def test_full_text_uses_current_authority_and_rebuilds_when_content_changes(self) -> None:
         original = self.seed.read_text(encoding="utf-8")

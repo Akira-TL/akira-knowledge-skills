@@ -1,6 +1,6 @@
 ---
 name: akira-knowledge
-description: 管理显式、持久、可检查、可更新和可复用的长期知识；0.1.x 已闭合 Obsidian Vault bootstrap、capture、curate、retrieve 与 revision-safe maintain 基础 Knowledge Loop。
+description: 管理显式、持久、可检查、可更新和可复用的长期知识；0.1.x 基础 Knowledge Loop 已闭合，0.2.x 正在扩展带显式检索范围的 Retrieval + Views。
 disable-model-invocation: true
 ---
 
@@ -66,7 +66,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 6. 路由到 Retrieval
 
-用户要按 stable identity 找回对象、按 Authority 属性筛选或检索当前 Markdown 正文时，路由到 sibling `knowledge-retrieve` Skill。Retrieval 对 Authority 保持只读；全文索引等可重建 Projection 可以机械刷新，但不能因为命中结果自动添加标签、链接、关系、权重或改写正文。
+用户要按 stable identity 找回对象、按 Authority 属性筛选或检索当前 Markdown 正文时，路由到 sibling `knowledge-retrieve` Skill。`0.2.x` 的基础检索默认只进入当前知识资产范围；用户明确需要材料记录时由 Retrieval 使用显式 scope 扩大本次请求范围。Router 不通过修改对象状态来表达 scope。Retrieval 对 Authority 保持只读；全文索引等可重建 Projection 可以机械刷新，但不能因为命中结果自动添加标签、链接、关系、权重或改写正文。
 
 ## 7. 路由到 Maintenance
 
@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-当前 `0.1.x` 已实现 Vault bootstrap / registration、显式 Capture、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval，以及既有知识的 revision-safe update，并已通过 `docs/validation/0.1-release-gate.md` 所记录的发布就绪黑盒门禁。系统性长期 Review、主动陈旧/冲突候选等能力仍按 0.x 路线图延期到后续版本；不得把这些延期能力伪装成 0.1.x 已实现，也不得自行用临时 Markdown/SQLite 操作绕过 owning Skill。通过当前门禁不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop 已实现并通过 `docs/validation/0.1-release-gate.md` 所记录的发布就绪黑盒门禁。`0.2.x` 当前已经开始扩展 Retrieval + Views，其中 Exact / Filter / Full-text 已统一使用调用时 Retrieval Scope，默认只检索当前 Knowledge Asset，材料记录必须显式扩大 scope；任务相关知识集合、typed relation 只读 traversal 与 Obsidian 动态视图仍由后续 0.2 实现票完成。系统性长期 Review、主动陈旧/冲突候选等能力继续按路线图延期；不得把这些未完成能力描述为已经实现。通过 0.1 门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
