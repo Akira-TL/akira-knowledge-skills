@@ -28,6 +28,16 @@ class ObjectRecord:
 
 
 @dataclass(frozen=True)
+class RelationRecord:
+    identity: str
+    source_ref: str
+    relation_type: str
+    target_ref: str
+    provenance: str
+    revision: int
+
+
+@dataclass(frozen=True)
 class ProposalRecord:
     proposal_id: str
     proposal_kind: str
@@ -180,6 +190,18 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             FOREIGN KEY (material_identity) REFERENCES material_records(identity) ON DELETE RESTRICT,
             FOREIGN KEY (proposal_id) REFERENCES proposals(proposal_id) ON DELETE RESTRICT
         );
+        CREATE TABLE IF NOT EXISTS relation_records (
+            identity TEXT PRIMARY KEY,
+            source_ref TEXT NOT NULL,
+            relation_type TEXT NOT NULL,
+            target_ref TEXT NOT NULL,
+            provenance TEXT NOT NULL,
+            revision INTEGER NOT NULL CHECK (revision >= 1)
+        );
+        CREATE INDEX IF NOT EXISTS relation_records_source_idx
+            ON relation_records(source_ref, relation_type);
+        CREATE INDEX IF NOT EXISTS relation_records_target_idx
+            ON relation_records(target_ref, relation_type);
         """
     )
     current = conn.execute(
@@ -224,6 +246,29 @@ def list_objects(conn: sqlite3.Connection) -> list[ObjectRecord]:
         "FROM objects ORDER BY identity"
     ).fetchall()
     return [ObjectRecord(**dict(row)) for row in rows]
+
+
+def list_relation_neighbors(
+    conn: sqlite3.Connection,
+    *,
+    seed_ref: str,
+    direction: str,
+    relation_type: str | None,
+) -> list[RelationRecord]:
+    if direction not in {"outgoing", "incoming"}:
+        raise StorageError(f"unsupported relation traversal direction: {direction}")
+    endpoint_column = "source_ref" if direction == "outgoing" else "target_ref"
+    sql = (
+        "SELECT identity, source_ref, relation_type, target_ref, provenance, revision "
+        f"FROM relation_records WHERE {endpoint_column} = ?"
+    )
+    params: list[object] = [seed_ref]
+    if relation_type is not None:
+        sql += " AND relation_type = ?"
+        params.append(relation_type)
+    sql += " ORDER BY identity"
+    rows = conn.execute(sql, tuple(params)).fetchall()
+    return [RelationRecord(**dict(row)) for row in rows]
 
 
 def initialize_search_projection(conn: sqlite3.Connection) -> None:

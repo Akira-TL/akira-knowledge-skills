@@ -128,6 +128,9 @@ def build_parser() -> argparse.ArgumentParser:
     task_parser.add_argument("--query", action="append", default=[])
     task_parser.add_argument("--kind")
     task_parser.add_argument("--status")
+    task_parser.add_argument("--relation-seed", action="append", default=[])
+    task_parser.add_argument("--relation-direction", choices=("outgoing", "incoming"))
+    task_parser.add_argument("--relation-type")
     task_parser.add_argument(
         "--property",
         action="append",
@@ -252,6 +255,9 @@ def main(argv: list[str] | None = None) -> int:
                 filter_kind=args.kind,
                 filter_status=args.status,
                 filter_properties=_parse_property_filters(args.property),
+                relation_seeds=args.relation_seed,
+                relation_direction=args.relation_direction,
+                relation_type=args.relation_type,
             )
         elif args.command == "retrieve-rebuild-index":
             payload = rebuild_full_text_projection(args.vault)

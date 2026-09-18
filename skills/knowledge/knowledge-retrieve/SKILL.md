@@ -85,7 +85,26 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-task \
 
 任务相关结果按 `stable_identity` 去重；同一对象被多条路径命中时，保留每条真实 `matched_evidence`、`retrieval_reason` 与路径类型。返回的 `retrieval_plan`、任务描述与结果集合只存在于本次调用，不获得 Knowledge identity，不写入新的 Knowledge 对象，也不成为 Agent 当前任务 Context 或 Memory 的 Authority。
 
-## 6. 结果合同
+## 6. typed relation 只读扩展
+
+任务相关检索可以把已经存在且已成为结构化 Authority 的 Relation Record 作为一条只读检索路径。当前 Agent 必须显式给出 relation seed、方向与可选 relation type：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-task \
+  --vault <vault> \
+  --task <current-task-description> \
+  --relation-seed <stable-identity> \
+  --relation-direction outgoing \
+  --relation-type <optional-type>
+```
+
+方向只能是 `outgoing` 或 `incoming`。扩展只读取 SQLite 中已经存在的 Relation Record，并保留 relation identity、`source`、`type`、`target`、`provenance`、revision 与方向。普通 wikilink、backlink、共同 tag、全文共现或模型相似度都不能进入这条路径。
+
+relation seed 与被扩展对象都受当前 Retrieval Scope 约束；默认 `current` 不能通过关系跳到 Material Record，只有显式增加 `material` scope 后才能返回材料对象。指向 Knowledge 外部引用或当前无法解析为 Knowledge 对象的端点不会被伪装成本地知识结果。
+
+`0.2.x` 没有 relation create / accept / edit 用户命令；无 accepted Relation Record 时 relation path 正常返回空结果。relation candidate、关系治理与 ontology 扩展仍属于 `0.3.x`。
+
+## 7. 结果合同
 
 每条检索结果至少包含：
 
@@ -98,8 +117,8 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-task \
 
 结果外层同时返回本次实际使用的 `scope`，让调用方可以检查对象为什么有资格进入本次检索。`0.2.x` 仍不提供统一 relevance score，也不把召回、排序或相似度解释成新的知识语义。
 
-## 7. 完成与停止边界
+## 8. 完成与停止边界
 
 检索完成时必须能够从结果回到当前 Authority，并明确说明命中依据。以下情况 fail closed：stable identity 在 registry 存在但当前管理范围中无法解析对应 Markdown、发现同一 stable identity 对应多个 Markdown、Markdown object kind 与结构化 registry 冲突、结构化 Authority store 本身不可读取。
 
-当前已完成统一 Retrieval Scope 与任务相关知识集合；typed relation 只读 traversal 与 Bases 动态视图仍是 `0.2.x` 后续实现票。向量检索、rerank 与 graph ranking 不属于 `0.2.x`。
+当前已完成统一 Retrieval Scope、任务相关知识集合与 accepted typed relation 的只读方向扩展；Bases 动态视图仍是 `0.2.x` 后续实现票。向量检索、rerank 与 graph ranking 不属于 `0.2.x`。

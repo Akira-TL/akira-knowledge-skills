@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Mapping, Sequence
 
 from knowledge_core.common import BootstrapError
+from knowledge_core.workflows.relation_retrieve import retrieve_relation_expansion
 from knowledge_core.workflows.retrieve import (
     _normalize_scopes,
     retrieve_exact,
@@ -18,6 +19,7 @@ class RetrievalMatch:
     path: str
     matched_evidence: str
     retrieval_reason: str
+    relation: Mapping[str, object] | None = None
 
 
 @dataclass
@@ -62,10 +64,14 @@ def _append_results(
                 f"Retrieval paths disagree about current Authority for stable identity: {identity}"
             )
 
+        relation = item.get("relation")
+        if relation is not None and not isinstance(relation, Mapping):
+            raise BootstrapError("Relation retrieval result has invalid relation metadata")
         match = RetrievalMatch(
             path=path,
             matched_evidence=evidence,
             retrieval_reason=reason,
+            relation=relation,
         )
         if match not in existing.matches:
             existing.matches.append(match)
@@ -81,6 +87,9 @@ def retrieve_task_package(
     filter_kind: str | None,
     filter_status: str | None,
     filter_properties: Mapping[str, str],
+    relation_seeds: Sequence[str],
+    relation_direction: str | None,
+    relation_type: str | None,
 ) -> dict[str, object]:
     if not task.strip():
         raise BootstrapError("Task-related retrieval requires a non-empty task description")
@@ -93,6 +102,11 @@ def retrieve_task_package(
         or filter_status is not None
         or bool(filter_properties)
     )
+    relation_seeds = tuple(dict.fromkeys(relation_seeds))
+    if relation_seeds and relation_direction is None:
+        raise BootstrapError("Relation retrieval path requires an explicit direction")
+    if relation_direction is not None and not relation_seeds:
+        raise BootstrapError("Relation direction requires at least one relation seed")
 
     paths: list[dict[str, object]] = []
     aggregated: dict[str, AggregatedResult] = {}
@@ -147,6 +161,28 @@ def retrieve_task_package(
             results=payload["results"],
         )
 
+    for seed_identity in relation_seeds:
+        payload = retrieve_relation_expansion(
+            vault,
+            seed_identity=seed_identity,
+            direction=str(relation_direction),
+            relation_type=relation_type,
+            scopes=normalized_scopes,
+        )
+        paths.append(
+            {
+                "type": "relation",
+                "seed_identity": seed_identity,
+                "direction": relation_direction,
+                "relation_type": relation_type,
+            }
+        )
+        _append_results(
+            aggregated,
+            path="relation",
+            results=payload["results"],
+        )
+
     if not paths:
         raise BootstrapError(
             "Retrieval plan must contain at least one exact, filter, or full-text path"
@@ -172,6 +208,7 @@ def retrieve_task_package(
                         "path": match.path,
                         "matched_evidence": match.matched_evidence,
                         "retrieval_reason": match.retrieval_reason,
+                        **({"relation": dict(match.relation)} if match.relation is not None else {}),
                     }
                     for match in item.matches
                 ],
