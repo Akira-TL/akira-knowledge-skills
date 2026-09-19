@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现，并分别通过 `docs/validation/0.1-release-gate.md` 与 `docs/validation/0.2-release-gate.md` 所记录的发布就绪黑盒门禁。`0.3.x` 正在实现 Knowledge Network；当前已完成 Relation Candidate 治理、stale protection、明确 approval、Relation Record 创建 / triple 去重 / provenance 增补、revision-safe 显式撤回，以及可重建 Obsidian Relation Graph Projection；完整 0.3 用户闭环与最终门禁仍由后续票完成。系统性长期 Review、主动发现 stale / conflict relation 等能力继续按路线图延期到 `0.4.x`；不得把这些未完成能力描述为已经实现。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现，并分别通过 `docs/validation/0.1-release-gate.md` 与 `docs/validation/0.2-release-gate.md` 所记录的发布就绪黑盒门禁。`0.3.x` 正在实现 Knowledge Network；Relation Candidate 治理、stale protection、明确 approval、Relation Record 创建 / triple 去重 / provenance 增补、revision-safe 显式撤回、可重建 Obsidian Relation Graph Projection，以及从 Candidate → approval / rejection → traversal → Graph → revoke 的完整用户闭环已经闭合；最终独立黑盒与 0.2 → 0.3 升级兼容门禁仍由 #38 完成。系统性长期 Review、主动发现 stale / conflict relation 等能力继续按路线图延期到 `0.4.x`；不得把这些未完成能力描述为已经实现。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
