@@ -13,7 +13,7 @@ disable-model-invocation: true
 根据用户当前真实意图选择唯一 owning Skill，而不是通过固定关键词机械匹配：
 
 - 明确要求长期保存、记下或加入知识库 → `knowledge-capture`；
-- 要把材料整理、提炼、综合成长期知识、为既有知识形成语义修改提案，或提出 / 检查 / 拒绝正式机器关系候选 → `knowledge-curate`；
+- 要把材料整理、提炼、综合成长期知识、为既有知识形成语义修改提案，或提出 / 检查 / 批准 / 拒绝正式机器关系候选 → `knowledge-curate`；
 - 要查找、筛选、全文搜索、按 stable identity 找回已有知识，或浏览当前知识 / 材料动态视图 → `knowledge-retrieve`；
 - 要同步用户在 Obsidian 中的直接 edit / move / rename，或执行已经批准的既有知识更新 → `knowledge-maintain`。
 
@@ -62,7 +62,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 5. 路由到 Curate
 
-用户要把一个或多个材料记录整理成长期知识、形成对既有知识资产的普通补充 / 纠错提案，或提出正式机器关系时，路由到 sibling `knowledge-curate` Skill。`0.3.x` 当前已实现 Relation Candidate 的提出、重新检查与拒绝：Candidate 不是 Relation Authority，也不参与 traversal；模型推断、普通 wikilink、tag 或相似度不得自动升级关系。Router 不自行生成或应用长期知识正文，也不直接写 Relation Record；后续 relation approval 继续由 `knowledge-curate` 的明确用户治理闭合。
+用户要把一个或多个材料记录整理成长期知识、形成对既有知识资产的普通补充 / 纠错提案，或提出正式机器关系时，路由到 sibling `knowledge-curate` Skill。`0.3.x` 已实现 Relation Candidate 的提出、重新检查、批准与拒绝：Candidate 不是 Relation Authority，也不参与 traversal；只有用户明确批准后才创建或补充 Relation Record。相同 active triple 复用 relation identity，新 provenance 推进 relation revision，重复 provenance 不制造无意义 revision。模型推断、普通 wikilink、tag 或相似度不得自动升级关系；Router 不自行生成或直接写 Relation Record。
 
 ## 6. 路由到 Retrieval
 
@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现，并分别通过 `docs/validation/0.1-release-gate.md` 与 `docs/validation/0.2-release-gate.md` 所记录的发布就绪黑盒门禁。`0.3.x` 正在实现 Knowledge Network；当前已完成 Relation Candidate 的提出、拒绝、endpoint revision / Authority fingerprint 快照与陈旧保护，relation approval、显式撤回、Graph Projection 与完整 0.3 门禁仍由后续票完成。系统性长期 Review、主动发现 stale / conflict relation 等能力继续按路线图延期到 `0.4.x`；不得把这些未完成能力描述为已经实现。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现，并分别通过 `docs/validation/0.1-release-gate.md` 与 `docs/validation/0.2-release-gate.md` 所记录的发布就绪黑盒门禁。`0.3.x` 正在实现 Knowledge Network；当前已完成 Relation Candidate 治理、stale protection、明确 approval、Relation Record 创建 / triple 去重与 provenance 增补，显式撤回、Graph Projection 与完整 0.3 门禁仍由后续票完成。系统性长期 Review、主动发现 stale / conflict relation 等能力继续按路线图延期到 `0.4.x`；不得把这些未完成能力描述为已经实现。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。

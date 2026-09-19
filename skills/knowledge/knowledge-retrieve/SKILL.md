@@ -98,11 +98,11 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-task \
   --relation-type <optional-type>
 ```
 
-方向只能是 `outgoing` 或 `incoming`。扩展只读取 SQLite 中已经存在的 Relation Record，并保留 relation identity、`source`、`type`、`target`、`provenance`、revision 与方向。普通 wikilink、backlink、共同 tag、全文共现或模型相似度都不能进入这条路径。
+方向只能是 `outgoing` 或 `incoming`。扩展只读取 SQLite 中已经存在的 Relation Record，并保留 relation identity、`source`、`type`、`target`、完整 provenance entries、revision 与方向。普通 wikilink、backlink、共同 tag、全文共现或模型相似度都不能进入这条路径。
 
 relation seed 与被扩展对象都受当前 Retrieval Scope 约束；默认 `current` 不能通过关系跳到 Material Record，只有显式增加 `material` scope 后才能返回材料对象。指向 Knowledge 外部引用或当前无法解析为 Knowledge 对象的端点不会被伪装成本地知识结果。
 
-`0.2.x` 没有 relation create / accept / edit 用户命令；无 accepted Relation Record 时 relation path 正常返回空结果。relation candidate、关系治理与 ontology 扩展仍属于 `0.3.x`。
+`0.3.x` 已由 `knowledge-curate` 增加 Relation Candidate 与明确 approval 治理；`knowledge-retrieve` 自身仍只读，不提供绕过 Candidate 的 Relation Record 直接写入口。无 accepted Relation Record 时 relation path 正常返回空结果。relation revoke、Graph Projection 与完整 Knowledge Network 闭环继续由后续 0.3 实现票完成。
 
 ## 7. Obsidian Bases 动态视图
 

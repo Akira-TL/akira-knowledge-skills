@@ -10,6 +10,7 @@ from knowledge_core.service import (
     BootstrapError,
     apply_update_proposal,
     approve_curate_proposal,
+    approve_relation_candidate,
     capture_material,
     create_curate_proposal,
     create_relation_candidate,
@@ -96,6 +97,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     relation_inspect_parser.add_argument("--vault", required=True, type=Path)
     relation_inspect_parser.add_argument("--candidate-id", required=True)
+
+    relation_approve_parser = subparsers.add_parser(
+        "relation-approve", help="Approve a pending Relation Candidate into Relation Authority"
+    )
+    relation_approve_parser.add_argument("--vault", required=True, type=Path)
+    relation_approve_parser.add_argument("--candidate-id", required=True)
+    relation_approve_parser.add_argument("--confirmed-approval", action="store_true")
 
     relation_reject_parser = subparsers.add_parser(
         "relation-reject", help="Reject a pending Relation Candidate"
@@ -273,6 +281,12 @@ def main(argv: list[str] | None = None) -> int:
             payload = inspect_relation_candidate(
                 args.vault,
                 candidate_id=args.candidate_id,
+            )
+        elif args.command == "relation-approve":
+            payload = approve_relation_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+                confirmed_approval=args.confirmed_approval,
             )
         elif args.command == "relation-reject":
             payload = reject_relation_candidate(

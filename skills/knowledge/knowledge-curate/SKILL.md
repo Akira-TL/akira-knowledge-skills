@@ -101,7 +101,21 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-reject 
   --confirmed-rejection
 ```
 
-拒绝只改变 Candidate 的治理状态，不创建 Relation Record。Candidate approval / Relation Record 创建由 `0.3.x` 后续实现阶段闭合；对应能力完成前，不得用直接 SQLite 写入绕过治理。
+拒绝只改变 Candidate 的治理状态，不创建 Relation Record。
+
+用户明确批准 pending Candidate 时执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-approve \
+  --vault <vault> \
+  --candidate-id <candidate-id> \
+  --confirmed-approval
+```
+
+approval 会在同一受控事务中重新解析内部 endpoint；若 Authority fingerprint 已变化，则 Candidate 变为 `stale` 并拒绝写 Relation Authority。批准新的 triple 时创建独立 Relation Record stable identity 与 revision 1；相同 active source / type / target 已存在时不创建重复 relation，而是复用原 identity。新的 provenance 会补充到原 Relation Record 并推进 relation revision；完全重复的 provenance 只完成 Candidate 治理，不制造无意义 revision。
+
+改变 source、type 或 target 必须通过新的 Candidate，并形成新的 relation 语义 identity；不得把已有 Relation Record 的 triple 原地改写成另一条关系。Relation approval 完成后，`knowledge-retrieve` 已有 traversal 可以立即只读消费该 Relation Record 及其全部 provenance。
+
 
 ## 5. 完成标准
 

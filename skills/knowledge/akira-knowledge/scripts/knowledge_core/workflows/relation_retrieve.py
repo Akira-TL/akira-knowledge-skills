@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Sequence
 
 from knowledge_core import storage
+from knowledge_core.persistence import relations as relation_store
 from knowledge_core.common import BootstrapError, _vault_root
 from knowledge_core.resolution import resolve_object, resolve_objects
 from knowledge_core.workflows.retrieve import _normalize_scopes, _result, _scope_allows
@@ -35,7 +36,7 @@ def retrieve_relation_expansion(
             )
 
         objects = resolve_objects(root, conn)
-        relations = storage.list_relation_neighbors(
+        relations = relation_store.list_relation_neighbors(
             conn,
             seed_ref=seed_identity,
             direction=direction,
@@ -52,10 +53,11 @@ def retrieve_relation_expansion(
             if neighbor is None or not _scope_allows(neighbor, normalized_scopes):
                 continue
 
+            provenance_entries = relation_store.list_relation_provenance(conn, relation.identity)
             evidence = (
                 f"relation {relation.identity}: "
                 f"{relation.source_ref} -[{relation.relation_type}]-> {relation.target_ref}; "
-                f"provenance={relation.provenance}"
+                f"provenance={'; '.join(provenance_entries)}"
             )
             reason = (
                 f"accepted typed relation {direction} expansion "
@@ -72,6 +74,7 @@ def retrieve_relation_expansion(
                 "type": relation.relation_type,
                 "target": relation.target_ref,
                 "provenance": relation.provenance,
+                "provenance_entries": provenance_entries,
                 "revision": relation.revision,
                 "direction": direction,
             }

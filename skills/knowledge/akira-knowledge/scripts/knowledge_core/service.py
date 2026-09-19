@@ -10,6 +10,7 @@ from knowledge_core.workflows.retrieve import (
 )
 from knowledge_core.workflows.maintain import apply_update_proposal, synchronize_object
 from knowledge_core.workflows.governance.relation_candidates import (
+    approve_relation_candidate,
     create_relation_candidate,
     inspect_relation_candidate,
     reject_relation_candidate,
@@ -20,6 +21,7 @@ from knowledge_core.workflows.projections.views import rebuild_dynamic_views
 __all__ = [
     "BootstrapError",
     "apply_update_proposal",
+    "approve_relation_candidate",
     "approve_curate_proposal",
     "capture_material",
     "create_curate_proposal",
