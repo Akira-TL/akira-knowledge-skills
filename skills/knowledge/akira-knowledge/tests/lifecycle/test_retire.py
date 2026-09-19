@@ -91,6 +91,159 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
             ).stdout
         )
 
+    def test_lifecycle_markdown_mirror_drift_fails_closed(self) -> None:
+        proposal = self.propose_retire()
+        self.run_cli(
+            "maintain-apply-retire",
+            "--vault", str(self.vault),
+            "--proposal-id", str(proposal["proposal_id"]),
+            "--confirmed-approval",
+        )
+        drifted = self.note.read_text(encoding="utf-8").replace(
+            "akira_knowledge_lifecycle: retired",
+            "akira_knowledge_lifecycle: current",
+        )
+        self.note.write_text(drifted, encoding="utf-8")
+
+        failed = self.run_cli(
+            "retrieve-exact",
+            "--vault", str(self.vault),
+            "--scope", "retired",
+            "--identity", self.identity,
+            expect=2,
+        )
+
+        self.assertIn(
+            "lifecycle Property disagrees with structured Authority",
+            failed.stderr,
+        )
+        self.assertEqual("retired", self.lifecycle())
+
+    def test_v1_database_migrates_current_lifecycle_without_rewriting_markdown(self) -> None:
+        before = self.note.read_bytes()
+        with sqlite3.connect(self.database) as conn:
+            conn.execute("DROP TABLE lifecycle_proposals")
+            conn.execute("DROP TABLE knowledge_asset_lifecycle_events")
+            conn.execute("DROP TABLE knowledge_asset_lifecycle")
+            conn.execute(
+                "UPDATE schema_meta SET value = '1' WHERE key = 'schema_version'"
+            )
+            conn.commit()
+
+        exact = json.loads(
+            self.run_cli(
+                "retrieve-exact",
+                "--vault", str(self.vault),
+                "--identity", self.identity,
+            ).stdout
+        )
+
+        self.assertEqual(self.identity, exact["result"]["stable_identity"])
+        self.assertEqual(before, self.note.read_bytes())
+        with sqlite3.connect(self.database) as conn:
+            schema_version = conn.execute(
+                "SELECT value FROM schema_meta WHERE key = 'schema_version'"
+            ).fetchone()[0]
+            lifecycle = conn.execute(
+                "SELECT status FROM knowledge_asset_lifecycle WHERE identity = ?",
+                (self.identity,),
+            ).fetchone()[0]
+        self.assertEqual("2", schema_version)
+        self.assertEqual("current", lifecycle)
+
+    def test_v2_missing_lifecycle_authority_fails_closed_instead_of_guessing_current(self) -> None:
+        with sqlite3.connect(self.database) as conn:
+            schema_version = conn.execute(
+                "SELECT value FROM schema_meta WHERE key = 'schema_version'"
+            ).fetchone()[0]
+            self.assertEqual("2", schema_version)
+            conn.execute(
+                "DELETE FROM knowledge_asset_lifecycle WHERE identity = ?",
+                (self.identity,),
+            )
+            conn.commit()
+
+        failed = self.run_cli(
+            "retrieve-exact",
+            "--vault", str(self.vault),
+            "--identity", self.identity,
+            expect=2,
+        )
+
+        self.assertIn(
+            "lifecycle is missing from structured Authority",
+            failed.stderr,
+        )
+        with sqlite3.connect(self.database) as conn:
+            row = conn.execute(
+                "SELECT status FROM knowledge_asset_lifecycle WHERE identity = ?",
+                (self.identity,),
+            ).fetchone()
+        self.assertIsNone(row)
+
+    def test_retire_preserves_existing_material_provenance(self) -> None:
+        material = json.loads(
+            self.run_cli(
+                "capture",
+                "--vault", str(self.vault),
+                "--confirmed-intent",
+                "--note", "Provenance evidence for a curated asset.",
+            ).stdout
+        )
+        proposal = json.loads(
+            self.run_cli(
+                "curate-propose",
+                "--vault", str(self.vault),
+                "--material-id", str(material["identity"]),
+                "--body", "# Curated\n\nCurated asset with provenance.\n",
+            ).stdout
+        )
+        created = json.loads(
+            self.run_cli(
+                "curate-approve",
+                "--vault", str(self.vault),
+                "--proposal-id", str(proposal["proposal_id"]),
+                "--confirmed-approval",
+            ).stdout
+        )
+        asset_identity = str(created["asset_identity"])
+
+        with sqlite3.connect(self.database) as conn:
+            before = conn.execute(
+                "SELECT material_identity, proposal_id, material_basis_revision "
+                "FROM knowledge_asset_materials WHERE asset_identity = ?",
+                (asset_identity,),
+            ).fetchall()
+            base_revision = conn.execute(
+                "SELECT revision FROM objects WHERE identity = ?",
+                (asset_identity,),
+            ).fetchone()[0]
+
+        retired = json.loads(
+            self.run_cli(
+                "maintain-propose-retire",
+                "--vault", str(self.vault),
+                "--identity", asset_identity,
+                "--base-revision", str(base_revision),
+                "--reason", "Curated asset is no longer current.",
+            ).stdout
+        )
+        self.run_cli(
+            "maintain-apply-retire",
+            "--vault", str(self.vault),
+            "--proposal-id", str(retired["proposal_id"]),
+            "--confirmed-approval",
+        )
+
+        with sqlite3.connect(self.database) as conn:
+            after = conn.execute(
+                "SELECT material_identity, proposal_id, material_basis_revision "
+                "FROM knowledge_asset_materials WHERE asset_identity = ?",
+                (asset_identity,),
+            ).fetchall()
+        self.assertTrue(before)
+        self.assertEqual(before, after)
+
     def test_retire_proposal_fails_closed_when_target_authority_changes(self) -> None:
         proposal = self.propose_retire()
         edited = self.note.read_text(encoding="utf-8").replace(
@@ -217,6 +370,18 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
         )
         self.assertEqual(["retired"], retired_exact["scope"])
         self.assertEqual(self.identity, retired_exact["result"]["stable_identity"])
+
+        lifecycle_property = self.run_cli(
+            "retrieve-filter",
+            "--vault", str(self.vault),
+            "--scope", "retired",
+            "--property", "akira_knowledge_lifecycle=retired",
+            expect=2,
+        )
+        self.assertIn(
+            "Use dedicated identity/kind/status filters for Akira Knowledge-owned properties",
+            lifecycle_property.stderr,
+        )
 
         retired_filter = json.loads(
             self.run_cli(

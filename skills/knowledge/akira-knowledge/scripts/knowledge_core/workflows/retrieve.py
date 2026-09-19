@@ -7,7 +7,7 @@ from typing import Mapping, Sequence
 from knowledge_core import storage
 from knowledge_core.projections import search as search_projection
 from knowledge_core.common import BootstrapError, _vault_root
-from knowledge_core.markdown import AK_ID, AK_KIND, AK_STATUS, searchable_text
+from knowledge_core.markdown import AK_ID, AK_KIND, AK_LIFECYCLE, AK_STATUS, searchable_text
 from knowledge_core.resolution import ResolvedObject, resolve_object, resolve_objects
 
 SCOPE_CURRENT = "current"
@@ -114,7 +114,7 @@ def retrieve_filter(
 ) -> dict[str, object]:
     root = _vault_root(vault)
     normalized_scopes = _normalize_scopes(scopes)
-    reserved = {AK_ID, AK_KIND, AK_STATUS}
+    reserved = {AK_ID, AK_KIND, AK_STATUS, AK_LIFECYCLE}
     conflicting = sorted(reserved.intersection(properties))
     if conflicting:
         raise BootstrapError(

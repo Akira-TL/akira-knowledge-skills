@@ -12,6 +12,7 @@ SYSTEM_DIR = ".akira-knowledge"
 CONFIG_NAME = "config.json"
 DB_NAME = "knowledge.sqlite"
 SCHEMA_VERSION = 1
+DB_SCHEMA_VERSION = 2
 
 
 class StorageError(RuntimeError):
@@ -75,7 +76,6 @@ class LifecycleProposalRecord:
     status: str
     target_identity: str
     base_revision: int
-    target_ref: str | None
     reason: str
     created_at: str
     decided_at: str | None
@@ -225,36 +225,30 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         );
         CREATE TABLE IF NOT EXISTS knowledge_asset_lifecycle (
             identity TEXT PRIMARY KEY,
-            status TEXT NOT NULL CHECK (status IN ('current', 'retired', 'superseded')),
-            superseded_by TEXT,
+            status TEXT NOT NULL CHECK (status IN ('current', 'retired')),
             updated_at TEXT NOT NULL,
-            FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT,
-            FOREIGN KEY (superseded_by) REFERENCES objects(identity) ON DELETE RESTRICT
+            FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT
         );
         CREATE TABLE IF NOT EXISTS knowledge_asset_lifecycle_events (
             identity TEXT NOT NULL,
             revision INTEGER NOT NULL CHECK (revision >= 1),
-            status TEXT NOT NULL CHECK (status IN ('current', 'retired', 'superseded')),
+            status TEXT NOT NULL CHECK (status IN ('current', 'retired')),
             event TEXT NOT NULL,
             reason TEXT NOT NULL,
-            superseded_by TEXT,
             recorded_at TEXT NOT NULL,
             PRIMARY KEY (identity, revision),
-            FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT,
-            FOREIGN KEY (superseded_by) REFERENCES objects(identity) ON DELETE RESTRICT
+            FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT
         );
         CREATE TABLE IF NOT EXISTS lifecycle_proposals (
             proposal_id TEXT PRIMARY KEY,
-            proposal_kind TEXT NOT NULL CHECK (proposal_kind IN ('retire', 'supersede')),
+            proposal_kind TEXT NOT NULL CHECK (proposal_kind = 'retire'),
             status TEXT NOT NULL CHECK (status IN ('pending', 'rejected', 'applied')),
             target_identity TEXT NOT NULL,
             base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-            target_ref TEXT,
             reason TEXT NOT NULL,
             created_at TEXT NOT NULL,
             decided_at TEXT,
-            FOREIGN KEY (target_identity) REFERENCES objects(identity) ON DELETE RESTRICT,
-            FOREIGN KEY (target_ref) REFERENCES objects(identity) ON DELETE RESTRICT
+            FOREIGN KEY (target_identity) REFERENCES objects(identity) ON DELETE RESTRICT
         );
         CREATE INDEX IF NOT EXISTS lifecycle_proposals_status_idx
             ON lifecycle_proposals(status);
@@ -320,11 +314,24 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             "CHECK (status IN ('active', 'revoked'))"
         )
 
+    current = conn.execute(
+        "SELECT value FROM schema_meta WHERE key = 'schema_version'"
+    ).fetchone()
+    current_db_version = None if current is None else str(current["value"])
+    if current_db_version not in {None, "1", str(DB_SCHEMA_VERSION)}:
+        raise StorageError(
+            f"unsupported SQLite schema version {current_db_version!r}; "
+            f"expected 1 or {DB_SCHEMA_VERSION}"
+        )
+
     timestamp = now_utc()
-    conn.execute(
-        "INSERT OR IGNORE INTO knowledge_asset_lifecycle(identity, status, superseded_by, updated_at) "
-        "SELECT identity, 'current', NULL, updated_at FROM objects WHERE kind = 'knowledge_asset'"
-    )
+    if current_db_version == "1":
+        conn.execute(
+            "INSERT OR IGNORE INTO knowledge_asset_lifecycle("
+            "identity, status, updated_at"
+            ") SELECT identity, 'current', updated_at "
+            "FROM objects WHERE kind = 'knowledge_asset'"
+        )
     conn.execute(
         "INSERT OR IGNORE INTO relation_events("
         "relation_identity, revision, event, provenance, recorded_at"
@@ -332,17 +339,15 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         (timestamp,),
     )
 
-    current = conn.execute(
-        "SELECT value FROM schema_meta WHERE key = 'schema_version'"
-    ).fetchone()
     if current is None:
         conn.execute(
             "INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?)",
-            (str(SCHEMA_VERSION),),
+            (str(DB_SCHEMA_VERSION),),
         )
-    elif current["value"] != str(SCHEMA_VERSION):
-        raise StorageError(
-            f"unsupported SQLite schema version {current['value']!r}; expected {SCHEMA_VERSION}"
+    elif current_db_version == "1":
+        conn.execute(
+            "UPDATE schema_meta SET value = ? WHERE key = 'schema_version'",
+            (str(DB_SCHEMA_VERSION),),
         )
 
 
@@ -408,19 +413,17 @@ def insert_lifecycle_proposal(
     target_identity: str,
     base_revision: int,
     reason: str,
-    target_ref: str | None = None,
 ) -> None:
     timestamp = now_utc()
     conn.execute(
         "INSERT INTO lifecycle_proposals("
-        "proposal_id, proposal_kind, status, target_identity, base_revision, target_ref, reason, created_at"
-        ") VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)",
+        "proposal_id, proposal_kind, status, target_identity, base_revision, reason, created_at"
+        ") VALUES (?, ?, 'pending', ?, ?, ?, ?)",
         (
             proposal_id,
             proposal_kind,
             target_identity,
             base_revision,
-            target_ref,
             reason,
             timestamp,
         ),
@@ -433,7 +436,7 @@ def get_lifecycle_proposal(
 ) -> LifecycleProposalRecord | None:
     row = conn.execute(
         "SELECT proposal_id, proposal_kind, status, target_identity, base_revision, "
-        "target_ref, reason, created_at, decided_at "
+        "reason, created_at, decided_at "
         "FROM lifecycle_proposals WHERE proposal_id = ?",
         (proposal_id,),
     ).fetchone()
@@ -467,7 +470,7 @@ def apply_retire_lifecycle_proposal(
     timestamp = now_utc()
     conn.execute(
         "UPDATE knowledge_asset_lifecycle "
-        "SET status = 'retired', superseded_by = NULL, updated_at = ? "
+        "SET status = 'retired', updated_at = ? "
         "WHERE identity = ?",
         (timestamp, identity),
     )
@@ -483,8 +486,8 @@ def apply_retire_lifecycle_proposal(
     )
     conn.execute(
         "INSERT INTO knowledge_asset_lifecycle_events("
-        "identity, revision, status, event, reason, superseded_by, recorded_at"
-        ") VALUES (?, ?, 'retired', 'retired', ?, NULL, ?)",
+        "identity, revision, status, event, reason, recorded_at"
+        ") VALUES (?, ?, 'retired', 'retired', ?, ?)",
         (identity, new_revision, proposal.reason, timestamp),
     )
     changed = conn.execute(
@@ -614,8 +617,8 @@ def insert_knowledge_asset_from_proposal(
         (identity, locator, fingerprint, timestamp),
     )
     conn.execute(
-        "INSERT INTO knowledge_asset_lifecycle(identity, status, superseded_by, updated_at) "
-        "VALUES (?, 'current', NULL, ?)",
+        "INSERT INTO knowledge_asset_lifecycle(identity, status, updated_at) "
+        "VALUES (?, 'current', ?)",
         (identity, timestamp),
     )
     for material_identity, basis_revision in material_bases:
@@ -764,8 +767,8 @@ def insert_registration(
     )
     if kind == "knowledge_asset":
         conn.execute(
-            "INSERT INTO knowledge_asset_lifecycle(identity, status, superseded_by, updated_at) "
-            "VALUES (?, 'current', NULL, ?)",
+            "INSERT INTO knowledge_asset_lifecycle(identity, status, updated_at) "
+            "VALUES (?, 'current', ?)",
             (identity, timestamp),
         )
 
