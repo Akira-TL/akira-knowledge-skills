@@ -12,11 +12,14 @@ from knowledge_core.service import (
     approve_curate_proposal,
     capture_material,
     create_curate_proposal,
+    create_relation_candidate,
+    inspect_relation_candidate,
     inspect_vault,
     rebuild_dynamic_views,
     rebuild_full_text_projection,
     register_notes,
     reject_curate_proposal,
+    reject_relation_candidate,
     retrieve_exact,
     retrieve_filter,
     retrieve_full_text,
@@ -74,6 +77,32 @@ def build_parser() -> argparse.ArgumentParser:
     reject_parser.add_argument("--vault", required=True, type=Path)
     reject_parser.add_argument("--proposal-id", required=True)
     reject_parser.add_argument("--confirmed-rejection", action="store_true")
+
+    relation_propose_parser = subparsers.add_parser(
+        "relation-propose", help="Persist a Relation Candidate without creating Relation Authority"
+    )
+    relation_propose_parser.add_argument("--vault", required=True, type=Path)
+    source_group = relation_propose_parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument("--source-id")
+    source_group.add_argument("--source-external")
+    relation_propose_parser.add_argument("--type", required=True)
+    target_group = relation_propose_parser.add_mutually_exclusive_group(required=True)
+    target_group.add_argument("--target-id")
+    target_group.add_argument("--target-external")
+    relation_propose_parser.add_argument("--provenance", required=True)
+
+    relation_inspect_parser = subparsers.add_parser(
+        "relation-inspect", help="Revalidate and inspect one Relation Candidate"
+    )
+    relation_inspect_parser.add_argument("--vault", required=True, type=Path)
+    relation_inspect_parser.add_argument("--candidate-id", required=True)
+
+    relation_reject_parser = subparsers.add_parser(
+        "relation-reject", help="Reject a pending Relation Candidate"
+    )
+    relation_reject_parser.add_argument("--vault", required=True, type=Path)
+    relation_reject_parser.add_argument("--candidate-id", required=True)
+    relation_reject_parser.add_argument("--confirmed-rejection", action="store_true")
 
     exact_parser = subparsers.add_parser(
         "retrieve-exact", help="Read one current Knowledge object by stable identity"
@@ -228,6 +257,27 @@ def main(argv: list[str] | None = None) -> int:
             payload = reject_curate_proposal(
                 args.vault,
                 proposal_id=args.proposal_id,
+                confirmed_rejection=args.confirmed_rejection,
+            )
+        elif args.command == "relation-propose":
+            payload = create_relation_candidate(
+                args.vault,
+                source_identity=args.source_id,
+                source_external=args.source_external,
+                relation_type=args.type,
+                target_identity=args.target_id,
+                target_external=args.target_external,
+                provenance=args.provenance,
+            )
+        elif args.command == "relation-inspect":
+            payload = inspect_relation_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+            )
+        elif args.command == "relation-reject":
+            payload = reject_relation_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
                 confirmed_rejection=args.confirmed_rejection,
             )
         elif args.command == "retrieve-exact":

@@ -38,6 +38,25 @@ class RelationRecord:
 
 
 @dataclass(frozen=True)
+class RelationCandidateRecord:
+    candidate_id: str
+    status: str
+    source_kind: str
+    source_ref: str
+    source_revision: int | None
+    source_fingerprint: str | None
+    relation_type: str
+    target_kind: str
+    target_ref: str
+    target_revision: int | None
+    target_fingerprint: str | None
+    provenance: str
+    created_at: str
+    decided_at: str | None
+    result_relation_identity: str | None
+
+
+@dataclass(frozen=True)
 class ProposalRecord:
     proposal_id: str
     proposal_kind: str
@@ -202,6 +221,25 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             ON relation_records(source_ref, relation_type);
         CREATE INDEX IF NOT EXISTS relation_records_target_idx
             ON relation_records(target_ref, relation_type);
+        CREATE TABLE IF NOT EXISTS relation_candidates (
+            candidate_id TEXT PRIMARY KEY,
+            status TEXT NOT NULL CHECK (status IN ('pending', 'rejected', 'stale', 'accepted')),
+            source_kind TEXT NOT NULL CHECK (source_kind IN ('knowledge', 'external')),
+            source_ref TEXT NOT NULL,
+            source_revision INTEGER,
+            source_fingerprint TEXT,
+            relation_type TEXT NOT NULL,
+            target_kind TEXT NOT NULL CHECK (target_kind IN ('knowledge', 'external')),
+            target_ref TEXT NOT NULL,
+            target_revision INTEGER,
+            target_fingerprint TEXT,
+            provenance TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            decided_at TEXT,
+            result_relation_identity TEXT
+        );
+        CREATE INDEX IF NOT EXISTS relation_candidates_status_idx
+            ON relation_candidates(status);
         """
     )
     current = conn.execute(
@@ -246,6 +284,89 @@ def list_objects(conn: sqlite3.Connection) -> list[ObjectRecord]:
         "FROM objects ORDER BY identity"
     ).fetchall()
     return [ObjectRecord(**dict(row)) for row in rows]
+
+
+def insert_relation_candidate(
+    conn: sqlite3.Connection,
+    *,
+    candidate_id: str,
+    source_kind: str,
+    source_ref: str,
+    source_revision: int | None,
+    source_fingerprint: str | None,
+    relation_type: str,
+    target_kind: str,
+    target_ref: str,
+    target_revision: int | None,
+    target_fingerprint: str | None,
+    provenance: str,
+) -> None:
+    timestamp = now_utc()
+    conn.execute(
+        "INSERT INTO relation_candidates("
+        "candidate_id, status, source_kind, source_ref, source_revision, source_fingerprint, "
+        "relation_type, target_kind, target_ref, target_revision, target_fingerprint, "
+        "provenance, created_at"
+        ") VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            candidate_id,
+            source_kind,
+            source_ref,
+            source_revision,
+            source_fingerprint,
+            relation_type,
+            target_kind,
+            target_ref,
+            target_revision,
+            target_fingerprint,
+            provenance,
+            timestamp,
+        ),
+    )
+
+
+def get_relation_candidate(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> RelationCandidateRecord | None:
+    row = conn.execute(
+        "SELECT candidate_id, status, source_kind, source_ref, source_revision, "
+        "source_fingerprint, relation_type, target_kind, target_ref, target_revision, "
+        "target_fingerprint, provenance, created_at, decided_at, result_relation_identity "
+        "FROM relation_candidates WHERE candidate_id = ?",
+        (candidate_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return RelationCandidateRecord(**dict(row))
+
+
+def mark_relation_candidate_stale(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> None:
+    timestamp = now_utc()
+    changed = conn.execute(
+        "UPDATE relation_candidates SET status = 'stale', decided_at = ? "
+        "WHERE candidate_id = ? AND status = 'pending'",
+        (timestamp, candidate_id),
+    ).rowcount
+    if changed != 1:
+        raise StorageError("relation candidate is not pending")
+
+
+def reject_relation_candidate(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> None:
+    timestamp = now_utc()
+    changed = conn.execute(
+        "UPDATE relation_candidates SET status = 'rejected', decided_at = ? "
+        "WHERE candidate_id = ? AND status = 'pending'",
+        (timestamp, candidate_id),
+    ).rowcount
+    if changed != 1:
+        raise StorageError("relation candidate is not pending")
 
 
 def list_relation_neighbors(

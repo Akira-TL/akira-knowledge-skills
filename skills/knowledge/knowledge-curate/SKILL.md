@@ -1,11 +1,11 @@
 ---
 name: knowledge-curate
-description: 把一个或多个材料记录整理成长期知识正文提案，或为既有知识资产形成普通更新提案；人类长期正文只有在用户明确批准后才成为 Authority。
+description: 把材料整理成长期知识正文提案、为既有知识形成更新提案，并在 0.3.x 中形成受治理的关系候选（Relation Candidate）；候选内容只有在后续明确批准后才能成为 Authority。
 ---
 
 # Knowledge Curate
 
-`knowledge-curate` 负责整理、提炼与综合材料，并通过 proposal → explicit approval 的治理边界创建或修改长期知识。它不负责低摩擦 Capture，也不绕过 revision-safe 更新规则。
+`knowledge-curate` 负责整理、提炼与综合材料，并通过 proposal → explicit approval 的治理边界创建或修改长期知识；`0.3.x` 还由本 Skill 负责形成关系候选（Relation Candidate）并处理候选的检查 / 拒绝。它不负责低摩擦 Capture，也不绕过 revision-safe 更新规则，更不能把模型推断的关系直接写成 Relation Record Authority。
 
 ## 1. 形成提案
 
@@ -65,7 +65,45 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py curate-reject \
 
 普通 update 不得暗中执行 split、merge、supersede 或其他 identity-level 变化。需要改变对象身份结构时，必须另行形成明确的 identity-level 语义提案。
 
-## 4. 完成标准
+## 4. Relation Candidate
+
+当用户明确提出正式关系意图，或当前 Agent 在知识整理中认为某个机器关系值得交给用户判断时，只能先形成 Relation Candidate：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-propose \
+  --vault <vault> \
+  --source-id <knowledge-id> \
+  --type <relation-type> \
+  --target-id <knowledge-id> \
+  --provenance <basis>
+```
+
+endpoint 也可以显式使用稳定外部引用，通过 `--source-external` / `--target-external` 与本地 identity 二选一。Candidate 返回精确的 source / type / target / provenance；对本地 Knowledge endpoint 还记录创建时实际读取到的 revision 与 Authority fingerprint。
+
+Candidate 是治理记录，不是 Relation Record，也不是 Knowledge Object：它不进入 `objects`，不获得 Relation Record stable identity，不参与 typed relation traversal，也不产生 active Graph Projection。普通 wikilink、tag、全文共现或模型相似度不得自动创建 Candidate；Agent 必须把拟议关系作为待用户治理的候选展示，不得把 Candidate 描述为“关系已经建立”。
+
+继续治理前可以重新检查 Candidate：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-inspect \
+  --vault <vault> \
+  --candidate-id <candidate-id>
+```
+
+对本地 endpoint，检查会重新解析当前 Authority。若正文或其他会改变 Authority fingerprint 的内容已经变化，pending Candidate 确定性转为 `stale`；若只是 rename / move 且 fingerprint 不变，则 Candidate 继续保持 `pending`，并返回当前 locator / revision。不得因为 locator 变化本身把语义未变的 Candidate 作废。
+
+用户明确拒绝 pending Candidate 时执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-reject \
+  --vault <vault> \
+  --candidate-id <candidate-id> \
+  --confirmed-rejection
+```
+
+拒绝只改变 Candidate 的治理状态，不创建 Relation Record。Candidate approval / Relation Record 创建由 `0.3.x` 后续实现阶段闭合；对应能力完成前，不得用直接 SQLite 写入绕过治理。
+
+## 5. 完成标准
 
 新建知识资产的 Curate 只有在以下条件同时成立时完成：
 
