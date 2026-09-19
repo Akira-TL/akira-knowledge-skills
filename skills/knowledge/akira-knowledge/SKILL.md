@@ -14,7 +14,7 @@ disable-model-invocation: true
 
 - 明确要求长期保存、记下或加入知识库 → `knowledge-capture`；
 - 要把材料整理、提炼、综合成长期知识、为既有知识形成语义修改提案，或提出 / 检查 / 批准 / 拒绝正式机器关系候选 → `knowledge-curate`；
-- 要查找、筛选、全文搜索、按 stable identity 找回已有知识，或浏览当前知识 / 材料动态视图 → `knowledge-retrieve`；
+- 要查找、筛选、全文搜索、按 stable identity 找回已有知识，或浏览当前知识 / 材料 / Relation Graph Projection → `knowledge-retrieve`；
 - 要同步用户在 Obsidian 中的直接 edit / move / rename、执行已经批准的既有知识更新，或显式撤回已接受 Relation Record → `knowledge-maintain`。
 
 一个请求跨越多个阶段时，Router 在 owning Skill 完成其有边界动作后重新判断下一意图。例如“把这段保存并整理成知识”先 Capture 得到材料记录，再进入 Curate；不能让 Capture 直接越权创建长期知识正文。
@@ -66,7 +66,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 6. 路由到 Retrieval
 
-用户要按 stable identity 找回对象、按 Authority 属性筛选、检索当前 Markdown 正文、希望“为当前任务取得相关知识”，或要在 Obsidian 中浏览当前知识 / 材料动态视图时，路由到 sibling `knowledge-retrieve` Skill。`0.2.x` 的基础检索默认只进入当前知识资产范围；用户明确需要材料记录时由 Retrieval 使用显式 scope 扩大本次请求范围。对于当前任务，Router / 当前 Agent 只负责把自然语言任务解释成显式、可检查的 retrieval plan，再交给 `knowledge-retrieve` 执行；计划可以组合 Exact / Filter / Full-text，并可沿已存在的 accepted Relation Record 做显式方向扩展。任务描述和 retrieval package 不成为新的 Knowledge 对象、Context 或 Memory。Obsidian Bases 只作为可重建浏览 Projection，不拥有对象状态或正文 Authority。Router 不通过修改对象状态来表达 scope，也不把普通 wikilink、tag 或模型相似度升级为 typed relation。Retrieval 对 Authority 保持只读；全文索引与动态视图等可重建 Projection 可以机械刷新，但不能因为命中结果或展示方式自动添加标签、链接、关系、权重或改写正文。
+用户要按 stable identity 找回对象、按 Authority 属性筛选、检索当前 Markdown 正文、希望“为当前任务取得相关知识”，或要在 Obsidian 中浏览当前知识 / 材料 / Relation Graph Projection 时，路由到 sibling `knowledge-retrieve` Skill。`0.2.x` 的基础检索默认只进入当前知识资产范围；用户明确需要材料记录时由 Retrieval 使用显式 scope 扩大本次请求范围。对于当前任务，Router / 当前 Agent 只负责把自然语言任务解释成显式、可检查的 retrieval plan，再交给 `knowledge-retrieve` 执行；计划可以组合 Exact / Filter / Full-text，并可沿 active Relation Record 做显式方向扩展。任务描述和 retrieval package 不成为新的 Knowledge 对象、Context 或 Memory。Obsidian Bases 与 Relation Graph 都只是可重建浏览 Projection，不拥有对象状态、关系状态或正文 Authority；revoked relation 不进入默认 traversal 或 active Graph Projection。Router 不通过修改对象状态来表达 scope，也不把普通 wikilink、tag 或模型相似度升级为 typed relation。Retrieval 对 Authority 保持只读；全文索引与动态视图等可重建 Projection 可以机械刷新，但不能因为命中结果或展示方式自动添加标签、链接、关系、权重或改写正文。
 
 ## 7. 路由到 Maintenance
 
@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现，并分别通过 `docs/validation/0.1-release-gate.md` 与 `docs/validation/0.2-release-gate.md` 所记录的发布就绪黑盒门禁。`0.3.x` 正在实现 Knowledge Network；当前已完成 Relation Candidate 治理、stale protection、明确 approval、Relation Record 创建 / triple 去重 / provenance 增补，以及 revision-safe 显式撤回；Graph Projection 与完整 0.3 门禁仍由后续票完成。系统性长期 Review、主动发现 stale / conflict relation 等能力继续按路线图延期到 `0.4.x`；不得把这些未完成能力描述为已经实现。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop 与 `0.2.x` Retrieval + Views 均已实现，并分别通过 `docs/validation/0.1-release-gate.md` 与 `docs/validation/0.2-release-gate.md` 所记录的发布就绪黑盒门禁。`0.3.x` 正在实现 Knowledge Network；当前已完成 Relation Candidate 治理、stale protection、明确 approval、Relation Record 创建 / triple 去重 / provenance 增补、revision-safe 显式撤回，以及可重建 Obsidian Relation Graph Projection；完整 0.3 用户闭环与最终门禁仍由后续票完成。系统性长期 Review、主动发现 stale / conflict relation 等能力继续按路线图延期到 `0.4.x`；不得把这些未完成能力描述为已经实现。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。

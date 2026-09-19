@@ -216,7 +216,8 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             relation_type TEXT NOT NULL,
             target_ref TEXT NOT NULL,
             provenance TEXT NOT NULL,
-            revision INTEGER NOT NULL CHECK (revision >= 1)
+            revision INTEGER NOT NULL CHECK (revision >= 1),
+            status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked'))
         );
         CREATE INDEX IF NOT EXISTS relation_records_source_idx
             ON relation_records(source_ref, relation_type);

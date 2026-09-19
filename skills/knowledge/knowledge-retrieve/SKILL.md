@@ -102,7 +102,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py retrieve-task \
 
 relation seed 与被扩展对象都受当前 Retrieval Scope 约束；默认 `current` 不能通过关系跳到 Material Record，只有显式增加 `material` scope 后才能返回材料对象。指向 Knowledge 外部引用或当前无法解析为 Knowledge 对象的端点不会被伪装成本地知识结果。
 
-`0.3.x` 已由 `knowledge-curate` 增加 Relation Candidate 与明确 approval 治理；`knowledge-retrieve` 自身仍只读，不提供绕过 Candidate 的 Relation Record 直接写入口。无 accepted Relation Record 时 relation path 正常返回空结果。relation revoke、Graph Projection 与完整 Knowledge Network 闭环继续由后续 0.3 实现票完成。
+`0.3.x` 已由 `knowledge-curate` 增加 Relation Candidate 与明确 approval 治理，并由 `knowledge-maintain` 增加显式 revoke；`knowledge-retrieve` 自身仍只读，不提供绕过 Candidate 的 Relation Record 直接写入口。无 active Relation Record 时 relation path 正常返回空结果；已 revoked relation 默认不参与 traversal。Relation Graph Projection 已实现为可重建机器 Markdown，完整 Knowledge Network 用户闭环仍由后续 0.3 实现票完成。
 
 ## 7. Obsidian Bases 动态视图
 
@@ -119,7 +119,24 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py views-rebuild \
 
 当前没有 `retired` 等生命周期 Authority 时，不生成虚构 retired 视图。该 `.base` 文件是普通可重建本地配置，不需要 Obsidian 特有 link-aware mutation；后续若视图操作真正依赖 Obsidian 运行时语义，再按 Router 的官方 CLI / 上游 Skill 边界处理。
 
-## 8. 结果合同
+## 8. Obsidian Relation Graph Projection
+
+用户要在 Obsidian Graph View 中浏览已经成为 Authority 的正式机器关系时，`knowledge-retrieve` 可以机械重建 Relation Graph Projection：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-graph-rebuild \
+  --vault <vault>
+```
+
+该命令只读取当前 `active` Relation Record，并在 Akira Knowledge 自有的 `Akira Knowledge Graph/` Projection 目录生成机器 Markdown relation node。每个节点至少展示 relation identity、type、revision、source、target 与全部 provenance；本地 Knowledge endpoint 按 stable identity 重新解析当前 canonical locator 并生成 Obsidian wikilink，external reference 只显示为外部引用，不伪装成本地链接。
+
+Graph Projection node 不是 Knowledge Asset，也不是 Relation Authority，不带 `akira_knowledge_id`。删除整个 Projection 目录、删除单个 node 或损坏 node 后都可以从结构化 Relation Authority 重建；rebuild 不推进 Relation Record 或 Knowledge 对象 revision。endpoint 发生纯 rename / move 时，relation identity / revision 不变，下一次 rebuild 使用新的 canonical locator。
+
+Graph Projection 目录使用 Akira ownership marker。存在同名但未拥有的用户目录时必须 fail closed，不覆盖用户文件。已经 `revoked` 的关系不进入 active Graph Projection，先前存在的机器 relation node 会在 rebuild 时移除。普通用户 wikilink 仍只是导航链接，不因与机器 Projection 一起出现在 Graph View 中就获得 typed relation 语义。
+
+如果一个 relation ref 对应已注册本地 Knowledge identity，但当前 canonical Markdown 无法解析，Graph rebuild 必须 fail closed；不得把损坏的本地 endpoint 静默降格成 external reference。
+
+## 9. 结果合同
 
 每条检索结果至少包含：
 
@@ -132,8 +149,8 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py views-rebuild \
 
 结果外层同时返回本次实际使用的 `scope`，让调用方可以检查对象为什么有资格进入本次检索。`0.2.x` 仍不提供统一 relevance score，也不把召回、排序或相似度解释成新的知识语义。
 
-## 9. 完成与停止边界
+## 10. 完成与停止边界
 
 检索完成时必须能够从结果回到当前 Authority，并明确说明命中依据。以下情况 fail closed：stable identity 在 registry 存在但当前管理范围中无法解析对应 Markdown、发现同一 stable identity 对应多个 Markdown、Markdown object kind 与结构化 registry 冲突、结构化 Authority store 本身不可读取。
 
-`0.2.x` 的统一 Retrieval Scope、任务相关知识集合、accepted typed relation 只读方向扩展、Obsidian Bases 动态视图、完整用户闭环与升级兼容门禁均已完成并通过独立黑盒验收。向量检索、rerank 与 graph ranking 不属于 `0.2.x`。
+`0.2.x` 的统一 Retrieval Scope、任务相关知识集合、accepted typed relation 只读方向扩展、Obsidian Bases 动态视图、完整用户闭环与升级兼容门禁均已完成并通过独立黑盒验收。`0.3.x` 当前已在既有只读 traversal 上加入受治理的 Relation Record 与可重建 Obsidian Relation Graph Projection；Graph Projection 仍不改变 Retrieval 的 Authority 只读边界。向量检索、rerank 与 graph ranking 不属于 `0.2.x` / 当前 `0.3.x`。

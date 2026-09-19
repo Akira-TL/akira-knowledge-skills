@@ -16,6 +16,7 @@ from knowledge_core.workflows.governance.relation_candidates import (
     reject_relation_candidate,
 )
 from knowledge_core.workflows.retrieval_plan import retrieve_task_package
+from knowledge_core.workflows.projections.relation_graph import rebuild_relation_graph
 from knowledge_core.workflows.projections.views import rebuild_dynamic_views
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "inspect_relation_candidate",
     "inspect_vault",
     "rebuild_full_text_projection",
+    "rebuild_relation_graph",
     "register_notes",
     "reject_curate_proposal",
     "reject_relation_candidate",

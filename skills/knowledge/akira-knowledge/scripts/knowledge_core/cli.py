@@ -17,6 +17,7 @@ from knowledge_core.service import (
     inspect_relation_candidate,
     inspect_vault,
     rebuild_dynamic_views,
+    rebuild_relation_graph,
     rebuild_full_text_projection,
     register_notes,
     reject_curate_proposal,
@@ -187,6 +188,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     views_parser.add_argument("--vault", required=True, type=Path)
 
+    graph_parser = subparsers.add_parser(
+        "relation-graph-rebuild", help="Rebuild active Relation Record Graph Projection"
+    )
+    graph_parser.add_argument("--vault", required=True, type=Path)
+
     sync_parser = subparsers.add_parser(
         "maintain-sync", help="Synchronize current locator/fingerprint into the revision ledger"
     )
@@ -342,6 +348,8 @@ def main(argv: list[str] | None = None) -> int:
             payload = rebuild_full_text_projection(args.vault)
         elif args.command == "views-rebuild":
             payload = rebuild_dynamic_views(args.vault)
+        elif args.command == "relation-graph-rebuild":
+            payload = rebuild_relation_graph(args.vault)
         elif args.command == "maintain-sync":
             payload = synchronize_object(args.vault, identity=args.identity)
         elif args.command == "maintain-apply-update":
