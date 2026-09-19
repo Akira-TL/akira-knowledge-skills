@@ -8,11 +8,13 @@ import sys
 
 from knowledge_core.service import (
     BootstrapError,
+    apply_retire_proposal,
     apply_update_proposal,
     approve_curate_proposal,
     approve_relation_candidate,
     capture_material,
     create_curate_proposal,
+    create_retire_proposal,
     create_relation_candidate,
     inspect_relation_candidate,
     inspect_vault,
@@ -206,6 +208,23 @@ def build_parser() -> argparse.ArgumentParser:
     update_parser.add_argument("--proposal-id", required=True)
     update_parser.add_argument("--confirmed-approval", action="store_true")
 
+    retire_propose_parser = subparsers.add_parser(
+        "maintain-propose-retire",
+        help="Create a revision-bound proposal to retire one current Knowledge Asset",
+    )
+    retire_propose_parser.add_argument("--vault", required=True, type=Path)
+    retire_propose_parser.add_argument("--identity", required=True)
+    retire_propose_parser.add_argument("--base-revision", required=True, type=int)
+    retire_propose_parser.add_argument("--reason", required=True)
+
+    retire_apply_parser = subparsers.add_parser(
+        "maintain-apply-retire",
+        help="Apply an explicitly approved Knowledge Asset retire proposal",
+    )
+    retire_apply_parser.add_argument("--vault", required=True, type=Path)
+    retire_apply_parser.add_argument("--proposal-id", required=True)
+    retire_apply_parser.add_argument("--confirmed-approval", action="store_true")
+
     revoke_parser = subparsers.add_parser(
         "relation-revoke", help="Explicitly revoke an active Relation Record"
     )
@@ -354,6 +373,19 @@ def main(argv: list[str] | None = None) -> int:
             payload = synchronize_object(args.vault, identity=args.identity)
         elif args.command == "maintain-apply-update":
             payload = apply_update_proposal(
+                args.vault,
+                proposal_id=args.proposal_id,
+                confirmed_approval=args.confirmed_approval,
+            )
+        elif args.command == "maintain-propose-retire":
+            payload = create_retire_proposal(
+                args.vault,
+                identity=args.identity,
+                expected_base_revision=args.base_revision,
+                reason=args.reason,
+            )
+        elif args.command == "maintain-apply-retire":
+            payload = apply_retire_proposal(
                 args.vault,
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,

@@ -68,6 +68,19 @@ class ProposalRecord:
     result_identity: str | None
 
 
+@dataclass(frozen=True)
+class LifecycleProposalRecord:
+    proposal_id: str
+    proposal_kind: str
+    status: str
+    target_identity: str
+    base_revision: int
+    target_ref: str | None
+    reason: str
+    created_at: str
+    decided_at: str | None
+
+
 def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -210,6 +223,42 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             FOREIGN KEY (material_identity) REFERENCES material_records(identity) ON DELETE RESTRICT,
             FOREIGN KEY (proposal_id) REFERENCES proposals(proposal_id) ON DELETE RESTRICT
         );
+        CREATE TABLE IF NOT EXISTS knowledge_asset_lifecycle (
+            identity TEXT PRIMARY KEY,
+            status TEXT NOT NULL CHECK (status IN ('current', 'retired', 'superseded')),
+            superseded_by TEXT,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT,
+            FOREIGN KEY (superseded_by) REFERENCES objects(identity) ON DELETE RESTRICT
+        );
+        CREATE TABLE IF NOT EXISTS knowledge_asset_lifecycle_events (
+            identity TEXT NOT NULL,
+            revision INTEGER NOT NULL CHECK (revision >= 1),
+            status TEXT NOT NULL CHECK (status IN ('current', 'retired', 'superseded')),
+            event TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            superseded_by TEXT,
+            recorded_at TEXT NOT NULL,
+            PRIMARY KEY (identity, revision),
+            FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT,
+            FOREIGN KEY (superseded_by) REFERENCES objects(identity) ON DELETE RESTRICT
+        );
+        CREATE TABLE IF NOT EXISTS lifecycle_proposals (
+            proposal_id TEXT PRIMARY KEY,
+            proposal_kind TEXT NOT NULL CHECK (proposal_kind IN ('retire', 'supersede')),
+            status TEXT NOT NULL CHECK (status IN ('pending', 'rejected', 'applied')),
+            target_identity TEXT NOT NULL,
+            base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
+            target_ref TEXT,
+            reason TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            decided_at TEXT,
+            FOREIGN KEY (target_identity) REFERENCES objects(identity) ON DELETE RESTRICT,
+            FOREIGN KEY (target_ref) REFERENCES objects(identity) ON DELETE RESTRICT
+        );
+        CREATE INDEX IF NOT EXISTS lifecycle_proposals_status_idx
+            ON lifecycle_proposals(status);
+
         CREATE TABLE IF NOT EXISTS relation_records (
             identity TEXT PRIMARY KEY,
             source_ref TEXT NOT NULL,
@@ -272,6 +321,10 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         )
 
     timestamp = now_utc()
+    conn.execute(
+        "INSERT OR IGNORE INTO knowledge_asset_lifecycle(identity, status, superseded_by, updated_at) "
+        "SELECT identity, 'current', NULL, updated_at FROM objects WHERE kind = 'knowledge_asset'"
+    )
     conn.execute(
         "INSERT OR IGNORE INTO relation_events("
         "relation_identity, revision, event, provenance, recorded_at"
@@ -337,6 +390,111 @@ def get_material_status(conn: sqlite3.Connection, identity: str) -> str | None:
         (identity,),
     ).fetchone()
     return None if row is None else str(row["status"])
+
+
+def get_knowledge_asset_lifecycle(conn: sqlite3.Connection, identity: str) -> str | None:
+    row = conn.execute(
+        "SELECT status FROM knowledge_asset_lifecycle WHERE identity = ?",
+        (identity,),
+    ).fetchone()
+    return None if row is None else str(row["status"])
+
+
+def insert_lifecycle_proposal(
+    conn: sqlite3.Connection,
+    *,
+    proposal_id: str,
+    proposal_kind: str,
+    target_identity: str,
+    base_revision: int,
+    reason: str,
+    target_ref: str | None = None,
+) -> None:
+    timestamp = now_utc()
+    conn.execute(
+        "INSERT INTO lifecycle_proposals("
+        "proposal_id, proposal_kind, status, target_identity, base_revision, target_ref, reason, created_at"
+        ") VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)",
+        (
+            proposal_id,
+            proposal_kind,
+            target_identity,
+            base_revision,
+            target_ref,
+            reason,
+            timestamp,
+        ),
+    )
+
+
+def get_lifecycle_proposal(
+    conn: sqlite3.Connection,
+    proposal_id: str,
+) -> LifecycleProposalRecord | None:
+    row = conn.execute(
+        "SELECT proposal_id, proposal_kind, status, target_identity, base_revision, "
+        "target_ref, reason, created_at, decided_at "
+        "FROM lifecycle_proposals WHERE proposal_id = ?",
+        (proposal_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return LifecycleProposalRecord(**dict(row))
+
+
+def apply_retire_lifecycle_proposal(
+    conn: sqlite3.Connection,
+    *,
+    proposal_id: str,
+    identity: str,
+    locator: str,
+    fingerprint: str,
+) -> int:
+    record = get_by_identity(conn, identity)
+    if record is None or record.kind != "knowledge_asset":
+        raise StorageError(f"knowledge asset does not exist: {identity}")
+    lifecycle = get_knowledge_asset_lifecycle(conn, identity)
+    if lifecycle != "current":
+        raise StorageError(f"knowledge asset is not current: {identity}")
+
+    proposal = get_lifecycle_proposal(conn, proposal_id)
+    if proposal is None or proposal.status != "pending" or proposal.proposal_kind != "retire":
+        raise StorageError("retire proposal is not pending")
+    if proposal.target_identity != identity:
+        raise StorageError("retire proposal target does not match knowledge asset")
+
+    new_revision = record.revision + 1
+    timestamp = now_utc()
+    conn.execute(
+        "UPDATE knowledge_asset_lifecycle "
+        "SET status = 'retired', superseded_by = NULL, updated_at = ? "
+        "WHERE identity = ?",
+        (timestamp, identity),
+    )
+    conn.execute(
+        "UPDATE objects SET locator = ?, revision = ?, authority_fingerprint = ?, updated_at = ? "
+        "WHERE identity = ?",
+        (locator, new_revision, fingerprint, timestamp, identity),
+    )
+    conn.execute(
+        "INSERT INTO revisions(identity, revision, event, locator, authority_fingerprint, recorded_at) "
+        "VALUES (?, ?, 'retired', ?, ?, ?)",
+        (identity, new_revision, locator, fingerprint, timestamp),
+    )
+    conn.execute(
+        "INSERT INTO knowledge_asset_lifecycle_events("
+        "identity, revision, status, event, reason, superseded_by, recorded_at"
+        ") VALUES (?, ?, 'retired', 'retired', ?, NULL, ?)",
+        (identity, new_revision, proposal.reason, timestamp),
+    )
+    changed = conn.execute(
+        "UPDATE lifecycle_proposals SET status = 'applied', decided_at = ? "
+        "WHERE proposal_id = ? AND status = 'pending'",
+        (timestamp, proposal_id),
+    ).rowcount
+    if changed != 1:
+        raise StorageError("retire proposal is not pending")
+    return new_revision
 
 
 def insert_proposal(
@@ -454,6 +612,11 @@ def insert_knowledge_asset_from_proposal(
         "INSERT INTO revisions(identity, revision, event, locator, authority_fingerprint, recorded_at) "
         "VALUES (?, 1, 'created_from_proposal', ?, ?, ?)",
         (identity, locator, fingerprint, timestamp),
+    )
+    conn.execute(
+        "INSERT INTO knowledge_asset_lifecycle(identity, status, superseded_by, updated_at) "
+        "VALUES (?, 'current', NULL, ?)",
+        (identity, timestamp),
     )
     for material_identity, basis_revision in material_bases:
         conn.execute(
@@ -599,6 +762,12 @@ def insert_registration(
         "VALUES (?, 1, 'registered', ?, ?, ?)",
         (identity, locator, fingerprint, timestamp),
     )
+    if kind == "knowledge_asset":
+        conn.execute(
+            "INSERT INTO knowledge_asset_lifecycle(identity, status, superseded_by, updated_at) "
+            "VALUES (?, 'current', NULL, ?)",
+            (identity, timestamp),
+        )
 
 
 @contextmanager

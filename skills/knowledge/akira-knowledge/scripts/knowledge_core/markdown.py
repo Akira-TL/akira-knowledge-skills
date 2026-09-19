@@ -7,7 +7,8 @@ import re
 AK_ID = "akira_knowledge_id"
 AK_KIND = "akira_knowledge_kind"
 AK_STATUS = "akira_knowledge_status"
-AK_KEYS = (AK_ID, AK_KIND, AK_STATUS)
+AK_LIFECYCLE = "akira_knowledge_lifecycle"
+AK_KEYS = (AK_ID, AK_KIND, AK_STATUS, AK_LIFECYCLE)
 _KEY_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*:")
 
 
@@ -100,7 +101,7 @@ def create_knowledge_asset_markdown(*, identity: str, body: str) -> str:
     )
 
 
-def replace_knowledge_property(text: str, *, key: str, value: str) -> str:
+def set_knowledge_property(text: str, *, key: str, value: str) -> str:
     if key not in AK_KEYS:
         raise MarkdownConflict(f"Property is not owned by Akira Knowledge: {key}")
     view = split_frontmatter(text)
@@ -114,16 +115,29 @@ def replace_knowledge_property(text: str, *, key: str, value: str) -> str:
         match = _KEY_RE.match(line)
         if match and match.group(1) == key:
             matches.append(index)
-    if len(matches) != 1:
+    if len(matches) > 1:
         raise MarkdownConflict(
-            f"Expected exactly one Akira Knowledge property {key}, found {len(matches)}"
+            f"Expected at most one Akira Knowledge property {key}, found {len(matches)}"
         )
 
     lines = list(view.lines)
-    old_line = lines[matches[0]]
-    newline = "\r\n" if old_line.endswith("\r\n") else "\n" if old_line.endswith("\n") else ""
-    lines[matches[0]] = f"{key}: {value}{newline}"
+    if matches:
+        old_line = lines[matches[0]]
+        newline = "\r\n" if old_line.endswith("\r\n") else "\n" if old_line.endswith("\n") else ""
+        lines[matches[0]] = f"{key}: {value}{newline}"
+    else:
+        newline = "\r\n" if view.prefix.endswith("\r\n") else "\n"
+        lines.append(f"{key}: {value}{newline}")
     return view.prefix + "".join(lines) + view.closing + view.body
+
+
+def replace_knowledge_property(text: str, *, key: str, value: str) -> str:
+    view = split_frontmatter(text)
+    if not view.exists:
+        raise MarkdownConflict("Registered Markdown is missing YAML frontmatter")
+    if key not in top_level_keys(view):
+        raise MarkdownConflict(f"Expected exactly one Akira Knowledge property {key}, found 0")
+    return set_knowledge_property(text, key=key, value=value)
 
 
 def replace_human_body(text: str, *, body: str) -> str:

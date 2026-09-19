@@ -30,7 +30,7 @@ def retrieve_relation_expansion(
         storage.initialize_schema(conn)
         conn.commit()
         seed = resolve_object(root, conn, seed_identity)
-        if not _scope_allows(seed, normalized_scopes):
+        if not _scope_allows(conn, seed, normalized_scopes):
             raise BootstrapError(
                 f"Relation seed is outside requested retrieval scope: {seed_identity}"
             )
@@ -50,7 +50,7 @@ def retrieve_relation_expansion(
                 relation.target_ref if direction == "outgoing" else relation.source_ref
             )
             neighbor = objects.get(neighbor_identity)
-            if neighbor is None or not _scope_allows(neighbor, normalized_scopes):
+            if neighbor is None or not _scope_allows(conn, neighbor, normalized_scopes):
                 continue
 
             provenance_entries = relation_store.list_relation_provenance(conn, relation.identity)

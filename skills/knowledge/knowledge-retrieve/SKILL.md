@@ -9,9 +9,9 @@ description: 只读检索已经进入 Akira Knowledge 管理范围的对象；0.
 
 ## 1. 检索范围
 
-Exact、Authority property filter 与 Full-text 共用同一 scope 合同。未提供 `--scope` 时默认使用 `current`，只允许当前 Knowledge Asset 进入结果；Material Record 必须显式使用 `--scope material`。需要同时读取两类对象时重复参数：`--scope current --scope material`。
+Exact、Authority property filter 与 Full-text 共用同一 scope 合同。未提供 `--scope` 时默认使用 `current`，只允许当前 Knowledge Asset 进入结果；Material Record 必须显式使用 `--scope material`。`0.4.x` 已增加真实 `retired` lifecycle，只有显式使用 `--scope retired` 时退役 Knowledge Asset 才能进入结果。多个范围可以通过重复 `--scope` 组合。
 
-scope 只属于本次 retrieval request，不写回 Markdown、对象类别、生命周期状态、SQLite Authority 或 revision ledger。当前 `0.2.x` 只实现 `current` 与 `material` 两类 scope；对尚不存在的 `retired`、历史 revision 等范围必须受控失败，不得为了满足请求临时创造生命周期状态。
+scope 只属于本次 retrieval request，不写回 Markdown、对象类别、生命周期状态、SQLite Authority 或 revision ledger。当前已实现 `current`、`material` 与 `retired`；尚未实现的 lifecycle scope 必须受控失败，不得为了满足请求临时创造状态。
 
 ## 2. Exact retrieval
 
@@ -113,11 +113,11 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py views-rebuild \
   --vault <vault>
 ```
 
-该命令生成一个官方 `.base` YAML 配置，其中至少包含 `Current Knowledge` 与 `Materials` 两个 table view，分别依据 `akira_knowledge_kind` 过滤当前 Knowledge Asset 与 Material Record；材料视图可以显示 `akira_knowledge_status`。这些字段仍由各自既有 Authority / Projection 合同拥有，`.base` 文件只保存筛选与展示配置。
+该命令生成一个官方 `.base` YAML 配置，其中包含 `Current Knowledge`、`Retired Knowledge` 与 `Materials` table view。Knowledge Asset 视图使用 Knowledge-owned lifecycle 镜像区分当前与退役对象，材料视图继续显示既有 `akira_knowledge_status`；`.base` 文件只保存筛选与展示配置，不拥有 lifecycle 或材料状态 Authority。
 
 视图目录带有 Akira ownership marker。只有已确认属于 Akira Knowledge 的 Projection 目录可以覆盖重建；同名但没有 marker 的用户目录必须 fail closed。用户删除或损坏已拥有的 `.base` 文件后可以重新生成，重建不得修改 Markdown、对象状态、relation、provenance 或 revision ledger。
 
-当前没有 `retired` 等生命周期 Authority 时，不生成虚构 retired 视图。该 `.base` 文件是普通可重建本地配置，不需要 Obsidian 特有 link-aware mutation；后续若视图操作真正依赖 Obsidian 运行时语义，再按 Router 的官方 CLI / 上游 Skill 边界处理。
+`Retired Knowledge` 只展示 structured lifecycle Authority 已明确为 `retired` 的 Knowledge Asset；空视图不代表系统虚构了对象状态。该 `.base` 文件是普通可重建本地配置，不需要 Obsidian 特有 link-aware mutation；后续若视图操作真正依赖 Obsidian 运行时语义，再按 Router 的官方 CLI / 上游 Skill 边界处理。
 
 ## 8. Obsidian Relation Graph Projection
 
@@ -153,4 +153,4 @@ Graph Projection 目录使用 Akira ownership marker。存在同名但未拥有�
 
 检索完成时必须能够从结果回到当前 Authority，并明确说明命中依据。以下情况 fail closed：stable identity 在 registry 存在但当前管理范围中无法解析对应 Markdown、发现同一 stable identity 对应多个 Markdown、Markdown object kind 与结构化 registry 冲突、结构化 Authority store 本身不可读取。
 
-`0.2.x` 的统一 Retrieval Scope、任务相关知识集合、accepted typed relation 只读方向扩展、Obsidian Bases 动态视图、完整用户闭环与升级兼容门禁均已完成并通过独立黑盒验收。`0.3.x` 当前已在既有只读 traversal 上加入受治理的 Relation Record 与可重建 Obsidian Relation Graph Projection；Graph Projection 仍不改变 Retrieval 的 Authority 只读边界。向量检索、rerank 与 graph ranking 不属于 `0.2.x` / 当前 `0.3.x`。
+`0.2.x` 的统一 Retrieval Scope、任务相关知识集合、accepted typed relation 只读方向扩展、Obsidian Bases 动态视图、完整用户闭环与升级兼容门禁均已完成并通过独立黑盒验收。`0.3.x` 的受治理 Relation Record 与可重建 Obsidian Relation Graph Projection 已完成最终独立门禁。`0.4.x` 当前新增真实 `retired` lifecycle scope 与 Retired Knowledge Bases 视图；supersede、Systematic Review、Source 更新与批量维护仍未实现。向量检索、rerank 与 graph ranking 不属于当前实现。

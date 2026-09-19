@@ -18,12 +18,23 @@ properties:
     displayName: Note
   note.akira_knowledge_status:
     displayName: Status
+  note.akira_knowledge_lifecycle:
+    displayName: Lifecycle
 views:
   - type: table
     name: Current Knowledge
     filters:
       and:
         - 'note.akira_knowledge_kind == "knowledge_asset"'
+        - 'note.akira_knowledge_lifecycle != "retired"'
+    order:
+      - file.name
+  - type: table
+    name: Retired Knowledge
+    filters:
+      and:
+        - 'note.akira_knowledge_kind == "knowledge_asset"'
+        - 'note.akira_knowledge_lifecycle == "retired"'
     order:
       - file.name
   - type: table
@@ -83,6 +94,6 @@ def rebuild_dynamic_views(vault: Path) -> dict[str, object]:
         "vault": str(root),
         "projection_directory": VIEW_DIR_NAME,
         "view_file": f"{VIEW_DIR_NAME}/{VIEW_FILE_NAME}",
-        "views": ["Current Knowledge", "Materials"],
+        "views": ["Current Knowledge", "Retired Knowledge", "Materials"],
         "projection": True,
     }

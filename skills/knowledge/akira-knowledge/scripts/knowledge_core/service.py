@@ -8,7 +8,13 @@ from knowledge_core.workflows.retrieve import (
     retrieve_filter,
     retrieve_full_text,
 )
-from knowledge_core.workflows.maintain import apply_update_proposal, revoke_relation, synchronize_object
+from knowledge_core.workflows.maintain import (
+    apply_retire_proposal,
+    apply_update_proposal,
+    create_retire_proposal,
+    revoke_relation,
+    synchronize_object,
+)
 from knowledge_core.workflows.governance.relation_candidates import (
     approve_relation_candidate,
     create_relation_candidate,
@@ -21,11 +27,13 @@ from knowledge_core.workflows.projections.views import rebuild_dynamic_views
 
 __all__ = [
     "BootstrapError",
+    "apply_retire_proposal",
     "apply_update_proposal",
     "approve_relation_candidate",
     "approve_curate_proposal",
     "capture_material",
     "create_curate_proposal",
+    "create_retire_proposal",
     "create_relation_candidate",
     "inspect_relation_candidate",
     "inspect_vault",

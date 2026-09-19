@@ -10,6 +10,7 @@ from knowledge_core.common import BootstrapError, _safe_relative
 from knowledge_core.markdown import (
     AK_ID,
     AK_KIND,
+    AK_LIFECYCLE,
     MarkdownConflict,
     authority_fingerprint,
     top_level_properties,
@@ -70,6 +71,24 @@ def resolve_objects(root: Path, conn: sqlite3.Connection) -> dict[str, ResolvedO
             raise BootstrapError(
                 f"Managed Markdown object kind disagrees with registry: {path.relative_to(root)}"
             )
+        if record.kind == "knowledge_asset":
+            lifecycle = storage.get_knowledge_asset_lifecycle(conn, identity)
+            if lifecycle is None:
+                raise BootstrapError(
+                    f"Knowledge asset lifecycle is missing from structured Authority: {identity}"
+                )
+            lifecycle_mirror = properties.get(AK_LIFECYCLE)
+            if lifecycle == "current":
+                if lifecycle_mirror not in {None, "current"}:
+                    raise BootstrapError(
+                        "Knowledge lifecycle Property disagrees with structured Authority: "
+                        f"{path.relative_to(root)}"
+                    )
+            elif lifecycle_mirror != lifecycle:
+                raise BootstrapError(
+                    "Knowledge lifecycle Property disagrees with structured Authority: "
+                    f"{path.relative_to(root)}"
+                )
         if identity in resolved:
             raise BootstrapError(f"Duplicate stable identity found in managed Vault: {identity}")
         locator = path.relative_to(root).as_posix()

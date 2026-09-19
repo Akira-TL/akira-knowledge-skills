@@ -6,7 +6,16 @@ import sqlite3
 
 from knowledge_core import storage
 from knowledge_core.common import BootstrapError, _vault_root, _write_atomic
-from knowledge_core.markdown import AK_STATUS, MarkdownConflict, authority_fingerprint, replace_human_body, replace_knowledge_property
+from knowledge_core.ids import uuid7
+from knowledge_core.markdown import (
+    AK_LIFECYCLE,
+    AK_STATUS,
+    MarkdownConflict,
+    authority_fingerprint,
+    replace_human_body,
+    replace_knowledge_property,
+    set_knowledge_property,
+)
 from knowledge_core.persistence import relations as relation_store
 from knowledge_core.resolution import ResolvedObject, resolve_object
 
@@ -296,6 +305,151 @@ def apply_update_proposal(
         "canonical_locator": target_sync.locator,
         "revision": new_revision,
         "material_revisions": material_revisions,
+    }
+
+
+def create_retire_proposal(
+    vault: Path,
+    *,
+    identity: str,
+    expected_base_revision: int,
+    reason: str,
+) -> dict[str, object]:
+    root = _vault_root(vault)
+    if expected_base_revision < 1:
+        raise BootstrapError("Retire proposal base revision must be at least 1")
+    if not reason.strip():
+        raise BootstrapError("Retire proposal requires a non-empty reason")
+    if not storage.db_path(root).exists():
+        raise BootstrapError("Knowledge structured Authority store is missing")
+
+    conn = storage.connect(root)
+    try:
+        storage.initialize_schema(conn)
+        conn.commit()
+        with storage.transaction(conn):
+            target = sync_object_in_connection(root, conn, identity)
+        if target.kind != "knowledge_asset":
+            raise BootstrapError(f"Knowledge asset does not exist: {identity}")
+        lifecycle = storage.get_knowledge_asset_lifecycle(conn, identity)
+        if lifecycle is None:
+            raise BootstrapError(f"Knowledge asset lifecycle does not exist: {identity}")
+        if lifecycle != "current":
+            raise BootstrapError(f"Knowledge asset is not current: {identity}")
+        if target.revision != expected_base_revision:
+            raise BootstrapError(
+                "Target revision changed during retire proposal preparation; "
+                "re-read current Authority and create a new proposal"
+            )
+
+        proposal_id = str(uuid7())
+        with storage.transaction(conn):
+            storage.insert_lifecycle_proposal(
+                conn,
+                proposal_id=proposal_id,
+                proposal_kind="retire",
+                target_identity=identity,
+                base_revision=expected_base_revision,
+                reason=reason.strip(),
+            )
+    finally:
+        conn.close()
+
+    return {
+        "vault": str(root),
+        "proposal_id": proposal_id,
+        "proposal_kind": "retire",
+        "status": "pending",
+        "target_identity": identity,
+        "base_revision": expected_base_revision,
+        "current_lifecycle": lifecycle,
+        "proposed_lifecycle": "retired",
+        "reason": reason.strip(),
+    }
+
+
+def apply_retire_proposal(
+    vault: Path,
+    *,
+    proposal_id: str,
+    confirmed_approval: bool,
+) -> dict[str, object]:
+    root = _vault_root(vault)
+    if not confirmed_approval:
+        raise BootstrapError("Applying a retire proposal requires explicit user approval")
+    if not storage.db_path(root).exists():
+        raise BootstrapError("Knowledge structured Authority store is missing")
+
+    conn = storage.connect(root)
+    target_path: Path | None = None
+    target_original: str | None = None
+    try:
+        storage.initialize_schema(conn)
+        conn.commit()
+        proposal = storage.get_lifecycle_proposal(conn, proposal_id)
+        if proposal is None:
+            raise BootstrapError(f"Lifecycle proposal does not exist: {proposal_id}")
+        if proposal.status != "pending" or proposal.proposal_kind != "retire":
+            raise BootstrapError(f"Retire proposal is not pending: {proposal_id}")
+
+        target = _sync_and_commit(root, conn, proposal.target_identity)
+        if target.kind != "knowledge_asset":
+            raise BootstrapError("Retire proposal target is not a knowledge asset")
+        if target.revision != proposal.base_revision:
+            raise BootstrapError(
+                "Retire proposal is stale because target Authority changed since its base revision; "
+                "create a new proposal from the current revision"
+            )
+        lifecycle = storage.get_knowledge_asset_lifecycle(conn, proposal.target_identity)
+        if lifecycle != "current":
+            raise BootstrapError("Retire proposal target is no longer current")
+
+        try:
+            transformed = set_knowledge_property(
+                target.text,
+                key=AK_LIFECYCLE,
+                value="retired",
+            )
+        except MarkdownConflict as exc:
+            raise BootstrapError(
+                f"Cannot safely update lifecycle Property {target.locator}: {exc}"
+            ) from exc
+        transformed_fingerprint = authority_fingerprint(transformed)
+        if transformed_fingerprint != target.fingerprint:
+            raise BootstrapError(
+                "Lifecycle mirror unexpectedly changed human Authority fingerprint"
+            )
+
+        target_path = root / target.locator
+        target_original = target.text
+        try:
+            with storage.transaction(conn):
+                _write_atomic(target_path, transformed)
+                new_revision = storage.apply_retire_lifecycle_proposal(
+                    conn,
+                    proposal_id=proposal_id,
+                    identity=proposal.target_identity,
+                    locator=target.locator,
+                    fingerprint=transformed_fingerprint,
+                )
+        except Exception:
+            if target_path is not None and target_original is not None:
+                try:
+                    _write_atomic(target_path, target_original)
+                except OSError:
+                    pass
+            raise
+    finally:
+        conn.close()
+
+    return {
+        "vault": str(root),
+        "proposal_id": proposal_id,
+        "status": "applied",
+        "stable_identity": proposal.target_identity,
+        "canonical_locator": target.locator,
+        "lifecycle": "retired",
+        "revision": new_revision,
     }
 
 

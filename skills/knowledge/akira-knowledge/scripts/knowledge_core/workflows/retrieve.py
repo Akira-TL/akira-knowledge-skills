@@ -12,7 +12,8 @@ from knowledge_core.resolution import ResolvedObject, resolve_object, resolve_ob
 
 SCOPE_CURRENT = "current"
 SCOPE_MATERIAL = "material"
-_SUPPORTED_SCOPES = (SCOPE_CURRENT, SCOPE_MATERIAL)
+SCOPE_RETIRED = "retired"
+_SUPPORTED_SCOPES = (SCOPE_CURRENT, SCOPE_MATERIAL, SCOPE_RETIRED)
 
 
 def _normalize_scopes(scopes: Sequence[str] | None) -> tuple[str, ...]:
@@ -20,18 +21,31 @@ def _normalize_scopes(scopes: Sequence[str] | None) -> tuple[str, ...]:
     unsupported = [scope for scope in requested if scope not in _SUPPORTED_SCOPES]
     if unsupported:
         raise BootstrapError(
-            "Unsupported retrieval scope in 0.2.x: "
+            "Unsupported retrieval scope: "
             + ", ".join(unsupported)
-            + "; supported scopes are current and material"
+            + "; supported scopes are current, material, and retired"
         )
     if not requested:
         raise BootstrapError("Retrieval scope must not be empty")
     return requested
 
 
-def _scope_allows(obj: ResolvedObject, scopes: Sequence[str]) -> bool:
-    if SCOPE_CURRENT in scopes and obj.kind == "knowledge_asset":
-        return True
+def _scope_allows(
+    conn: sqlite3.Connection,
+    obj: ResolvedObject,
+    scopes: Sequence[str],
+) -> bool:
+    if obj.kind == "knowledge_asset":
+        lifecycle = storage.get_knowledge_asset_lifecycle(conn, obj.identity)
+        if lifecycle is None:
+            raise BootstrapError(
+                f"Knowledge asset lifecycle does not exist: {obj.identity}"
+            )
+        if SCOPE_CURRENT in scopes and lifecycle == "current":
+            return True
+        if SCOPE_RETIRED in scopes and lifecycle == "retired":
+            return True
+        return False
     if SCOPE_MATERIAL in scopes and obj.kind == "material_record":
         return True
     return False
@@ -72,7 +86,7 @@ def retrieve_exact(
         storage.initialize_schema(conn)
         conn.commit()
         obj = resolve_object(root, conn, identity)
-        if not _scope_allows(obj, normalized_scopes):
+        if not _scope_allows(conn, obj, normalized_scopes):
             raise BootstrapError(
                 f"Knowledge object is outside requested retrieval scope: {identity}"
             )
@@ -120,7 +134,7 @@ def retrieve_filter(
         objects = resolve_objects(root, conn)
         for identity in sorted(objects):
             obj = objects[identity]
-            if not _scope_allows(obj, normalized_scopes):
+            if not _scope_allows(conn, obj, normalized_scopes):
                 continue
             if kind is not None and obj.kind != kind:
                 continue
@@ -223,7 +237,7 @@ def retrieve_full_text(
         results: list[dict[str, object]] = []
         for identity, evidence in raw_matches:
             obj = objects.get(identity)
-            if obj is None or not _scope_allows(obj, normalized_scopes):
+            if obj is None or not _scope_allows(conn, obj, normalized_scopes):
                 continue
             results.append(
                 _result(

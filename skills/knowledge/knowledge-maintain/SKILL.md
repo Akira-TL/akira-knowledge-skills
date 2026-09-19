@@ -1,11 +1,11 @@
 ---
 name: knowledge-maintain
-description: 执行 revision-safe 的显式知识更新、确定性状态同步，以及 0.3.x 的 Relation Record 显式撤回；在写入前阻止陈旧 revision 覆盖较新的 Authority。
+description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset 明确退役；在写入前阻止陈旧 revision 覆盖较新的 Authority。
 ---
 
 # Knowledge Maintain
 
-`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 还由本 Skill 执行已接受 Relation Record 的显式撤回。系统性回顾、自动发现陈旧/冲突关系、Source 更新监控、批量维护与知识网络健康检查属于后续 `0.4.x`，当前不得提前伪装成已实现能力。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的明确退役闭环。系统性回顾、自动发现陈旧/冲突关系、Source 更新监控、supersede、批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
 
 ## 1. 同步当前对象状态
 
@@ -56,7 +56,40 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-u
 
 Projection / 全文索引重建不得推进 Authority revision；这一职责继续由 `knowledge-retrieve` 的可重建 Projection 机制承担。
 
-## 4. Relation Record 显式撤回
+## 4. Knowledge Asset 明确退役
+
+用户明确决定某个当前 Knowledge Asset 不再进入默认当前知识范围时，先基于实际读取的 current revision 形成退役提案：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-propose-retire \
+  --vault <vault> \
+  --identity <knowledge-asset-id> \
+  --base-revision <actually-read-revision> \
+  --reason <retire-reason>
+```
+
+提案只保存待治理的 lifecycle 变化，不立即修改 Authority。用户明确批准后执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-retire \
+  --vault <vault> \
+  --proposal-id <proposal-id> \
+  --confirmed-approval
+```
+
+批准执行前重新同步目标；若目标 revision 已不同，提案 fail closed 并保持 pending。成功退役后：
+
+- stable identity、canonical Markdown、history 与既有 provenance 保留；
+- Knowledge Asset revision 单调推进；
+- structured lifecycle Authority 进入 `retired`；
+- Markdown 中的 `akira_knowledge_lifecycle: retired` 只是 Knowledge-owned 机器维护表示，不成为第二 Authority；
+- 默认 `current` Retrieval Scope 排除该对象；
+- 显式 `retired` scope 仍可通过 Exact / Filter / task retrieval 回读同一 identity；
+- Material Record 的 `待处理 / 已处理` 状态不受影响。
+
+退役不等于 supersede；替代关系与更完整的长期 Review 仍由后续 0.4 实现票完成。
+
+## 5. Relation Record 显式撤回
 
 用户明确要求撤回一个当前正式关系时，调用方必须先读取该 Relation Record 的当前 revision，并在确认后执行：
 
@@ -84,7 +117,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 撤回是用户主动纠错能力，不等于系统自动判断关系已经陈旧或冲突。自动 stale / conflict 发现、Source 更新影响检查、批量 Review 与自动生成撤回候选继续属于 `0.4.x`。
 
-## 5. 停止边界
+## 6. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 
