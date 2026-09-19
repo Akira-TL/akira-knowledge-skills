@@ -35,6 +35,7 @@ class RelationRecord:
     target_ref: str
     provenance: str
     revision: int
+    status: str
 
 
 @dataclass(frozen=True)
@@ -258,6 +259,17 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             ON relation_candidates(status);
         """
     )
+    relation_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(relation_records)").fetchall()
+    }
+    if "status" not in relation_columns:
+        conn.execute(
+            "ALTER TABLE relation_records "
+            "ADD COLUMN status TEXT NOT NULL DEFAULT 'active' "
+            "CHECK (status IN ('active', 'revoked'))"
+        )
+
     timestamp = now_utc()
     conn.execute(
         "INSERT OR IGNORE INTO relation_events("

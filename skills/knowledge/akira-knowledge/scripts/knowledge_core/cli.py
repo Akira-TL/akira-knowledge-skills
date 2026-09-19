@@ -25,6 +25,7 @@ from knowledge_core.service import (
     retrieve_filter,
     retrieve_full_text,
     retrieve_task_package,
+    revoke_relation,
     synchronize_object,
 )
 from knowledge_core.storage import StorageError
@@ -198,6 +199,14 @@ def build_parser() -> argparse.ArgumentParser:
     update_parser.add_argument("--vault", required=True, type=Path)
     update_parser.add_argument("--proposal-id", required=True)
     update_parser.add_argument("--confirmed-approval", action="store_true")
+
+    revoke_parser = subparsers.add_parser(
+        "relation-revoke", help="Explicitly revoke an active Relation Record"
+    )
+    revoke_parser.add_argument("--vault", required=True, type=Path)
+    revoke_parser.add_argument("--relation-id", required=True)
+    revoke_parser.add_argument("--expected-revision", required=True, type=int)
+    revoke_parser.add_argument("--confirmed-revoke", action="store_true")
     return parser
 
 
@@ -335,11 +344,18 @@ def main(argv: list[str] | None = None) -> int:
             payload = rebuild_dynamic_views(args.vault)
         elif args.command == "maintain-sync":
             payload = synchronize_object(args.vault, identity=args.identity)
-        else:
+        elif args.command == "maintain-apply-update":
             payload = apply_update_proposal(
                 args.vault,
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,
+            )
+        else:
+            payload = revoke_relation(
+                args.vault,
+                relation_identity=args.relation_id,
+                expected_revision=args.expected_revision,
+                confirmed_revoke=args.confirmed_revoke,
             )
     except (BootstrapError, StorageError, sqlite3.DatabaseError, OSError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)

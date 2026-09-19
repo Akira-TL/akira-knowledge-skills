@@ -1,11 +1,11 @@
 ---
 name: knowledge-maintain
-description: 执行 Akira Knowledge 0.1 的 revision-safe 显式知识更新与确定性状态同步；检测用户在 Obsidian 中的 move / rename / edit，并在应用已批准更新前阻止陈旧提案覆盖较新的 Authority。
+description: 执行 revision-safe 的显式知识更新、确定性状态同步，以及 0.3.x 的 Relation Record 显式撤回；在写入前阻止陈旧 revision 覆盖较新的 Authority。
 ---
 
 # Knowledge Maintain
 
-`knowledge-maintain` 在 `0.1.x` 只负责显式用户触发的 revision-safe 更新和确定性状态同步。系统性回顾、陈旧/冲突候选、Source 更新监控、批量维护与知识网络健康检查属于后续 `0.4.x`，当前不得提前伪装成已实现能力。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 还由本 Skill 执行已接受 Relation Record 的显式撤回。系统性回顾、自动发现陈旧/冲突关系、Source 更新监控、批量维护与知识网络健康检查属于后续 `0.4.x`，当前不得提前伪装成已实现能力。
 
 ## 1. 同步当前对象状态
 
@@ -56,7 +56,35 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-u
 
 Projection / 全文索引重建不得推进 Authority revision；这一职责继续由 `knowledge-retrieve` 的可重建 Projection 机制承担。
 
-## 4. 停止边界
+## 4. Relation Record 显式撤回
+
+用户明确要求撤回一个当前正式关系时，调用方必须先读取该 Relation Record 的当前 revision，并在确认后执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke \
+  --vault <vault> \
+  --relation-id <relation-id> \
+  --expected-revision <actually-read-revision> \
+  --confirmed-revoke
+```
+
+撤回只允许在调用方实际读取的 expected revision 仍等于当前 relation revision 时执行；如果其间 relation 因 provenance 增补或其他 Authority 变化推进了 revision，则 fail closed，要求重新读取并再次确认。
+
+成功撤回：
+
+- 保留 relation stable identity；
+- 保留 source / type / target；
+- 保留全部 provenance 与 revision history；
+- relation status 进入 `revoked`；
+- relation revision 单调推进；
+- 默认 typed relation traversal 不再消费该关系；
+- 不物理删除 Relation Record。
+
+对已经 revoked 的关系，如果调用方提供的 expected revision 正好等于当前 revision，则作为幂等操作返回，不再次推进 revision；若使用旧 revision 重复操作，仍按 stale-write 规则 fail closed。
+
+撤回是用户主动纠错能力，不等于系统自动判断关系已经陈旧或冲突。自动 stale / conflict 发现、Source 更新影响检查、批量 Review 与自动生成撤回候选继续属于 `0.4.x`。
+
+## 5. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 

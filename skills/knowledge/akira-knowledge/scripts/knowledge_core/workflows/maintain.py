@@ -7,6 +7,7 @@ import sqlite3
 from knowledge_core import storage
 from knowledge_core.common import BootstrapError, _vault_root, _write_atomic
 from knowledge_core.markdown import AK_STATUS, MarkdownConflict, authority_fingerprint, replace_human_body, replace_knowledge_property
+from knowledge_core.persistence import relations as relation_store
 from knowledge_core.resolution import ResolvedObject, resolve_object
 
 
@@ -295,4 +296,49 @@ def apply_update_proposal(
         "canonical_locator": target_sync.locator,
         "revision": new_revision,
         "material_revisions": material_revisions,
+    }
+
+
+def revoke_relation(
+    vault: Path,
+    *,
+    relation_identity: str,
+    expected_revision: int,
+    confirmed_revoke: bool,
+) -> dict[str, object]:
+    root = _vault_root(vault)
+    if not confirmed_revoke:
+        raise BootstrapError("Revoking a Relation Record requires explicit user confirmation")
+    if expected_revision < 1:
+        raise BootstrapError("Expected relation revision must be at least 1")
+    if not storage.db_path(root).exists():
+        raise BootstrapError("Knowledge structured Authority store is missing")
+
+    conn = storage.connect(root)
+    try:
+        storage.initialize_schema(conn)
+        conn.commit()
+        with storage.transaction(conn):
+            relation, changed = relation_store.revoke_relation_record(
+                conn,
+                relation_identity=relation_identity,
+                expected_revision=expected_revision,
+            )
+            provenance_entries = relation_store.list_relation_provenance(
+                conn,
+                relation.identity,
+            )
+    finally:
+        conn.close()
+
+    return {
+        "vault": str(root),
+        "relation_identity": relation.identity,
+        "source": relation.source_ref,
+        "type": relation.relation_type,
+        "target": relation.target_ref,
+        "provenance": provenance_entries,
+        "status": relation.status,
+        "revision": relation.revision,
+        "changed": changed,
     }

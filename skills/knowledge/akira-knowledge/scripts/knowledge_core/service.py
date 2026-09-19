@@ -8,7 +8,7 @@ from knowledge_core.workflows.retrieve import (
     retrieve_filter,
     retrieve_full_text,
 )
-from knowledge_core.workflows.maintain import apply_update_proposal, synchronize_object
+from knowledge_core.workflows.maintain import apply_update_proposal, revoke_relation, synchronize_object
 from knowledge_core.workflows.governance.relation_candidates import (
     approve_relation_candidate,
     create_relation_candidate,
@@ -36,6 +36,7 @@ __all__ = [
     "retrieve_filter",
     "retrieve_full_text",
     "retrieve_task_package",
+    "revoke_relation",
     "rebuild_dynamic_views",
     "synchronize_object",
 ]

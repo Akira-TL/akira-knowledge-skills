@@ -101,8 +101,9 @@ def get_relation_by_triple(
     target_ref: str,
 ) -> RelationRecord | None:
     rows = conn.execute(
-        "SELECT identity, source_ref, relation_type, target_ref, provenance, revision "
+        "SELECT identity, source_ref, relation_type, target_ref, provenance, revision, status "
         "FROM relation_records WHERE source_ref = ? AND relation_type = ? AND target_ref = ? "
+        "AND status = 'active' "
         "ORDER BY identity",
         (source_ref, relation_type, target_ref),
     ).fetchall()
@@ -171,11 +172,13 @@ def add_relation_provenance_from_candidate(
     candidate_id: str,
 ) -> tuple[int, bool]:
     record = conn.execute(
-        "SELECT provenance, revision FROM relation_records WHERE identity = ?",
+        "SELECT provenance, revision, status FROM relation_records WHERE identity = ?",
         (relation_identity,),
     ).fetchone()
     if record is None:
         raise StorageError(f"Relation Record does not exist: {relation_identity}")
+    if str(record["status"]) != "active":
+        raise StorageError(f"Relation Record is not active: {relation_identity}")
 
     existing = {str(record["provenance"])}
     existing.update(
@@ -216,6 +219,67 @@ def add_relation_provenance_from_candidate(
     return revision, changed_revision
 
 
+def get_relation_record(
+    conn: sqlite3.Connection,
+    relation_identity: str,
+) -> RelationRecord | None:
+    row = conn.execute(
+        "SELECT identity, source_ref, relation_type, target_ref, provenance, revision, status "
+        "FROM relation_records WHERE identity = ?",
+        (relation_identity,),
+    ).fetchone()
+    if row is None:
+        return None
+    return RelationRecord(**dict(row))
+
+
+def revoke_relation_record(
+    conn: sqlite3.Connection,
+    *,
+    relation_identity: str,
+    expected_revision: int,
+) -> tuple[RelationRecord, bool]:
+    record = get_relation_record(conn, relation_identity)
+    if record is None:
+        raise StorageError(f"Relation Record does not exist: {relation_identity}")
+    if record.revision != expected_revision:
+        raise StorageError(
+            "Relation Record revision changed after it was read; "
+            "re-read current relation Authority before revoking"
+        )
+    if record.status == "revoked":
+        return record, False
+    if record.status != "active":
+        raise StorageError(
+            f"Unsupported Relation Record status: {record.status}"
+        )
+
+    new_revision = record.revision + 1
+    timestamp = now_utc()
+    conn.execute(
+        "UPDATE relation_records SET status = 'revoked', revision = ? "
+        "WHERE identity = ? AND status = 'active' AND revision = ?",
+        (new_revision, relation_identity, expected_revision),
+    )
+    conn.execute(
+        "INSERT INTO relation_events(relation_identity, revision, event, provenance, recorded_at) "
+        "VALUES (?, ?, 'revoked', NULL, ?)",
+        (relation_identity, new_revision, timestamp),
+    )
+    updated = get_relation_record(conn, relation_identity)
+    if updated is None:
+        raise StorageError(f"Relation Record does not exist: {relation_identity}")
+    return updated, True
+
+
+def list_active_relation_records(conn: sqlite3.Connection) -> list[RelationRecord]:
+    rows = conn.execute(
+        "SELECT identity, source_ref, relation_type, target_ref, provenance, revision, status "
+        "FROM relation_records WHERE status = 'active' ORDER BY identity"
+    ).fetchall()
+    return [RelationRecord(**dict(row)) for row in rows]
+
+
 def list_relation_neighbors(
     conn: sqlite3.Connection,
     *,
@@ -227,8 +291,8 @@ def list_relation_neighbors(
         raise StorageError(f"unsupported relation traversal direction: {direction}")
     endpoint_column = "source_ref" if direction == "outgoing" else "target_ref"
     sql = (
-        "SELECT identity, source_ref, relation_type, target_ref, provenance, revision "
-        f"FROM relation_records WHERE {endpoint_column} = ?"
+        "SELECT identity, source_ref, relation_type, target_ref, provenance, revision, status "
+        f"FROM relation_records WHERE {endpoint_column} = ? AND status = 'active'"
     )
     params: list[object] = [seed_ref]
     if relation_type is not None:
