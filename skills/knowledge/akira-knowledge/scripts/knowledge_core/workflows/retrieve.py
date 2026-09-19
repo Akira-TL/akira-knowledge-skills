@@ -5,6 +5,7 @@ import sqlite3
 from typing import Mapping, Sequence
 
 from knowledge_core import storage
+from knowledge_core.projections import search as search_projection
 from knowledge_core.common import BootstrapError, _vault_root
 from knowledge_core.markdown import AK_ID, AK_KIND, AK_STATUS, searchable_text
 from knowledge_core.resolution import ResolvedObject, resolve_object, resolve_objects
@@ -206,14 +207,14 @@ def retrieve_full_text(
         ]
         desired_state = {identity: fingerprint for identity, fingerprint, _ in documents}
         try:
-            storage.initialize_search_projection(conn)
+            search_projection.initialize(conn)
             conn.commit()
-            current_state = storage.search_projection_state(conn)
-            current_count = storage.search_projection_count(conn)
+            current_state = search_projection.state(conn)
+            current_count = search_projection.count(conn)
             if current_state != desired_state or current_count != len(documents):
                 with storage.transaction(conn):
-                    storage.rebuild_search_projection(conn, documents)
-            raw_matches = storage.query_search_projection(conn, query)
+                    search_projection.rebuild(conn, documents)
+            raw_matches = search_projection.query(conn, query)
         except sqlite3.DatabaseError:
             conn.rollback()
             projection_mode = "authority-scan-fallback"
@@ -262,8 +263,8 @@ def rebuild_full_text_projection(vault: Path) -> dict[str, object]:
         ]
         try:
             with storage.transaction(conn):
-                storage.reset_search_projection(conn)
-                storage.rebuild_search_projection(conn, documents)
+                search_projection.reset(conn)
+                search_projection.rebuild(conn, documents)
         except sqlite3.DatabaseError as exc:
             conn.rollback()
             raise BootstrapError(f"SQLite FTS5 Projection cannot be rebuilt: {exc}") from exc
