@@ -203,7 +203,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 对已经 revoked 的关系，如果调用方提供的 expected revision 正好等于当前 revision，则作为幂等操作返回，不再次推进 revision；若使用旧 revision 重复操作，仍按 stale-write 规则 fail closed。
 
-撤回是用户主动纠错能力，不等于系统自动判断关系已经陈旧或冲突。自动 stale / conflict 发现、Source 更新影响检查、批量 Review 与自动生成撤回候选继续属于 `0.4.x`。
+撤回是用户主动纠错能力，不等于系统自动判断 Relation Record 已经陈旧或冲突。Knowledge Asset 的 Source Review / stale candidate 已在本版本实现；Relation stale / conflict Review、批量 Review 与关系维护候选继续由后续 `0.4.x` ticket 扩展，并仍复用既有 Relation Candidate / revoke 合同。
 
 ## 8. 停止边界
 
