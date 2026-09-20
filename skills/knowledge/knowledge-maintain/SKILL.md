@@ -1,11 +1,11 @@
 ---
 name: knowledge-maintain
-description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset 退役 / supersede lifecycle 治理；在写入前阻止陈旧 revision 覆盖较新的 Authority。
+description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset lifecycle 与 Source Review 治理；在写入前阻止陈旧 revision 覆盖较新的 Authority。
 ---
 
 # Knowledge Maintain
 
-`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的明确退役与 supersede lifecycle 闭环。系统性回顾、自动发现陈旧/冲突关系、Source 更新监控、批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle 与可验证 Source Review → stale candidate 闭环。跨知识冲突判断、Relation maintenance Review、批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
 
 ## 1. 同步当前对象状态
 
@@ -122,7 +122,62 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-s
 - replacement 继续作为自己的 `current` Knowledge Asset；
 - 已非 current 的对象不会被 retire / supersede 命令静默改写成另一 lifecycle。
 
-## 6. Relation Record 显式撤回
+## 6. Source Review 与陈旧候选
+
+当用户要求系统性检查某个当前 Knowledge Asset 的既有 Source 时，先从公开入口取得其 provenance Source 集合，不直接查询 SQLite：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-review-plan \
+  --vault <vault> \
+  --identity <knowledge-asset-id>
+```
+
+该计划只返回当前 target identity / revision / fingerprint / canonical locator、当前 lifecycle，以及从既有 material provenance 链确定性得到的 Source locator；不会创建 finding / candidate，也不会修改语义 Authority。
+
+当前 Agent 再使用执行时真实可用且适合每个 Source 的访问能力逐项完成核验。确定性后端不自行联网，也不接受单纯的“changed=true”结论；调用方必须提供此次实际比较的 basis / observed Source identity、revision、fingerprint 与证据。
+
+确认能够比较时执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-review-source \
+  --vault <vault> \
+  --identity <knowledge-asset-id> \
+  --source <source-locator> \
+  --basis-source-id <basis-source-identity> \
+  --basis-revision <basis-revision> \
+  --basis-fingerprint <basis-fingerprint> \
+  --observed-source-id <observed-source-identity> \
+  --observed-revision <observed-revision> \
+  --observed-fingerprint <observed-fingerprint> \
+  --evidence <verified-evidence>
+```
+
+如果当前无法确认 Source revision / fingerprint，使用 `--unknown`，并省略 observed 三项。此时只记录 `unknown` Review finding，不生成 stale candidate。
+
+后端要求该 Source locator 确实位于目标 Knowledge Asset 的 material provenance 链；observed Source identity 与 basis identity 不一致时 fail closed，不把重定向到另一 owner 的内容当作原 Source 的新 revision。
+
+只有 identity 一致且 revision 或 fingerprint 确实变化时，才形成 `source_stale` maintenance candidate。Candidate 绑定创建时目标 Knowledge identity / revision / fingerprint、Source basis / observed 状态和 evidence，但它不是 Knowledge Asset、Relation Record，也不自动修改正文、lifecycle、relation 或 provenance Authority。
+
+检查 Candidate：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-inspect-review-candidate \
+  --vault <vault> \
+  --candidate-id <candidate-id>
+```
+
+若目标 Authority 在 Candidate 创建后发生变化，pending Candidate 转为 `stale`，必须基于当前 Authority 重新 Review。用户明确拒绝 pending / stale Candidate 时：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-reject-review-candidate \
+  --vault <vault> \
+  --candidate-id <candidate-id> \
+  --confirmed-rejection
+```
+
+Review Candidate 不提供直接“批准并改 Authority”的旁路。需要正文更新时继续进入 `knowledge-curate` 的 update proposal → approval；需要 retire / supersede 时继续使用本 Skill 的 lifecycle proposal。Relation stale / conflict Review 由后续 0.4 ticket 在既有 Relation Candidate / revoke 合同上扩展。
+
+## 7. Relation Record 显式撤回
 
 用户明确要求撤回一个当前正式关系时，调用方必须先读取该 Relation Record 的当前 revision，并在确认后执行：
 
@@ -150,7 +205,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 撤回是用户主动纠错能力，不等于系统自动判断关系已经陈旧或冲突。自动 stale / conflict 发现、Source 更新影响检查、批量 Review 与自动生成撤回候选继续属于 `0.4.x`。
 
-## 7. 停止边界
+## 8. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 
@@ -160,6 +215,8 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 - 没有明确用户批准；
 - proposal target 或依据材料在 basis revision 后发生相关 Authority 编辑；
 - Knowledge-owned 状态镜像与结构化 Authority 漂移；
+- Source 不属于目标 Knowledge provenance、Source identity 无法保持一致，或 Source 当前状态无法被可靠比较；
+- Review Candidate 的目标 basis 已变化；
 - 结构化 Authority store 不可读取。
 
 `0.1.x` 不引入多 Agent 锁、claim、并发仲裁或自动语义 merge；这些也不属于 Akira Knowledge 当前产品职责。

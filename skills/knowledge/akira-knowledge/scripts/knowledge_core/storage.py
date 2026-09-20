@@ -12,7 +12,7 @@ SYSTEM_DIR = ".akira-knowledge"
 CONFIG_NAME = "config.json"
 DB_NAME = "knowledge.sqlite"
 SCHEMA_VERSION = 1
-DB_SCHEMA_VERSION = 3
+DB_SCHEMA_VERSION = 4
 
 
 class StorageError(RuntimeError):
@@ -140,15 +140,15 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             "SELECT value FROM schema_meta WHERE key = 'schema_version'"
         ).fetchone()
         existing_version = None if existing is None else str(existing["value"])
-        if existing_version not in {None, "1", "2", str(DB_SCHEMA_VERSION)}:
+        if existing_version not in {None, "1", "2", "3", str(DB_SCHEMA_VERSION)}:
             raise StorageError(
                 f"unsupported SQLite schema version {existing_version!r}; "
-                f"expected 1, 2, or {DB_SCHEMA_VERSION}"
+                f"expected 1, 2, 3, or {DB_SCHEMA_VERSION}"
             )
         if existing_version == "2":
             from knowledge_core.persistence import lifecycle as lifecycle_store
             lifecycle_store.migrate_schema_v2_to_v3(conn)
-            existing_version = str(DB_SCHEMA_VERSION)
+            existing_version = "3"
 
     conn.executescript(
         """
@@ -350,10 +350,10 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         "SELECT value FROM schema_meta WHERE key = 'schema_version'"
     ).fetchone()
     current_db_version = None if current is None else str(current["value"])
-    if current_db_version not in {None, "1", str(DB_SCHEMA_VERSION)}:
+    if current_db_version not in {None, "1", "3", str(DB_SCHEMA_VERSION)}:
         raise StorageError(
             f"unsupported SQLite schema version {current_db_version!r}; "
-            f"expected 1 or {DB_SCHEMA_VERSION}"
+            f"expected 1, 3, or {DB_SCHEMA_VERSION}"
         )
 
     timestamp = now_utc()
@@ -370,17 +370,13 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         ") SELECT identity, revision, 'existing_relation', provenance, ? FROM relation_records",
         (timestamp,),
     )
+    conn.commit()
 
-    if current is None:
-        conn.execute(
-            "INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?)",
-            (str(DB_SCHEMA_VERSION),),
-        )
-    elif current_db_version == "1":
-        conn.execute(
-            "UPDATE schema_meta SET value = ? WHERE key = 'schema_version'",
-            (str(DB_SCHEMA_VERSION),),
-        )
+    from knowledge_core.persistence import review as review_store
+    if current_db_version == str(DB_SCHEMA_VERSION):
+        review_store.validate_schema_v4(conn)
+    else:
+        review_store.migrate_schema_to_v4(conn)
 
 
 def get_by_identity(conn: sqlite3.Connection, identity: str) -> ObjectRecord | None:

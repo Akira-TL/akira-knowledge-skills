@@ -162,6 +162,8 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
     def test_v1_database_migrates_current_lifecycle_without_rewriting_markdown(self) -> None:
         before = self.note.read_bytes()
         with sqlite3.connect(self.database) as conn:
+            conn.execute("DROP TABLE maintenance_candidates")
+            conn.execute("DROP TABLE review_findings")
             conn.execute("DROP TABLE lifecycle_proposals")
             conn.execute("DROP TABLE knowledge_asset_lifecycle_events")
             conn.execute("DROP TABLE knowledge_asset_lifecycle")
@@ -188,7 +190,7 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
                 "SELECT status FROM knowledge_asset_lifecycle WHERE identity = ?",
                 (self.identity,),
             ).fetchone()[0]
-        self.assertEqual("3", schema_version)
+        self.assertEqual("4", schema_version)
         self.assertEqual("current", lifecycle)
 
     def test_current_schema_missing_lifecycle_authority_fails_closed_instead_of_guessing_current(self) -> None:
@@ -196,7 +198,7 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
             schema_version = conn.execute(
                 "SELECT value FROM schema_meta WHERE key = 'schema_version'"
             ).fetchone()[0]
-            self.assertEqual("3", schema_version)
+            self.assertEqual("4", schema_version)
             conn.execute(
                 "DELETE FROM knowledge_asset_lifecycle WHERE identity = ?",
                 (self.identity,),

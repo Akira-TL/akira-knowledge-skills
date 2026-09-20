@@ -107,7 +107,7 @@ class SupersedeLifecycleBlackBoxTests(unittest.TestCase):
             ).stdout
         )
 
-    def test_v2_lifecycle_schema_migrates_to_v3_without_losing_retired_state(self) -> None:
+    def test_v2_lifecycle_schema_migrates_to_current_schema_without_losing_retired_state(self) -> None:
         retire = json.loads(
             self.run_cli(
                 "maintain-propose-retire",
@@ -142,6 +142,8 @@ class SupersedeLifecycleBlackBoxTests(unittest.TestCase):
                 "FROM lifecycle_proposals ORDER BY proposal_id"
             ).fetchall()
 
+            conn.execute("DROP TABLE maintenance_candidates")
+            conn.execute("DROP TABLE review_findings")
             conn.execute("DROP TABLE lifecycle_proposals")
             conn.execute("DROP TABLE knowledge_asset_lifecycle_events")
             conn.execute("DROP TABLE knowledge_asset_lifecycle")
@@ -230,7 +232,7 @@ class SupersedeLifecycleBlackBoxTests(unittest.TestCase):
                 for row in conn.execute("PRAGMA table_info(lifecycle_proposals)").fetchall()
             }
 
-        self.assertEqual("3", schema_version)
+        self.assertEqual("4", schema_version)
         self.assertEqual(("retired", None), lifecycle)
         self.assertEqual(
             [(2, "retired", "retired", "Retired before v3 migration.", None)],

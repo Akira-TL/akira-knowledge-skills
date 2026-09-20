@@ -19,17 +19,21 @@ from knowledge_core.service import (
     create_supersede_proposal,
     create_relation_candidate,
     inspect_relation_candidate,
+    inspect_review_candidate,
     inspect_vault,
+    plan_source_review,
     rebuild_dynamic_views,
     rebuild_relation_graph,
     rebuild_full_text_projection,
     register_notes,
     reject_curate_proposal,
     reject_relation_candidate,
+    reject_review_candidate,
     retrieve_exact,
     retrieve_filter,
     retrieve_full_text,
     retrieve_task_package,
+    review_source,
     revoke_relation,
     synchronize_object,
 )
@@ -246,6 +250,44 @@ def build_parser() -> argparse.ArgumentParser:
     supersede_apply_parser.add_argument("--proposal-id", required=True)
     supersede_apply_parser.add_argument("--confirmed-approval", action="store_true")
 
+    review_plan_parser = subparsers.add_parser(
+        "maintain-review-plan",
+        help="List provenance Sources that should be verified for one current Knowledge Asset",
+    )
+    review_plan_parser.add_argument("--vault", required=True, type=Path)
+    review_plan_parser.add_argument("--identity", required=True)
+
+    review_source_parser = subparsers.add_parser(
+        "maintain-review-source",
+        help="Record one verified Source review and create a stale maintenance candidate when changed",
+    )
+    review_source_parser.add_argument("--vault", required=True, type=Path)
+    review_source_parser.add_argument("--identity", required=True)
+    review_source_parser.add_argument("--source", required=True)
+    review_source_parser.add_argument("--basis-source-id", required=True)
+    review_source_parser.add_argument("--basis-revision", required=True)
+    review_source_parser.add_argument("--basis-fingerprint", required=True)
+    review_source_parser.add_argument("--unknown", action="store_true")
+    review_source_parser.add_argument("--observed-source-id")
+    review_source_parser.add_argument("--observed-revision")
+    review_source_parser.add_argument("--observed-fingerprint")
+    review_source_parser.add_argument("--evidence", required=True)
+
+    review_inspect_parser = subparsers.add_parser(
+        "maintain-inspect-review-candidate",
+        help="Revalidate and inspect one maintenance candidate",
+    )
+    review_inspect_parser.add_argument("--vault", required=True, type=Path)
+    review_inspect_parser.add_argument("--candidate-id", required=True)
+
+    review_reject_parser = subparsers.add_parser(
+        "maintain-reject-review-candidate",
+        help="Reject a pending or stale maintenance candidate",
+    )
+    review_reject_parser.add_argument("--vault", required=True, type=Path)
+    review_reject_parser.add_argument("--candidate-id", required=True)
+    review_reject_parser.add_argument("--confirmed-rejection", action="store_true")
+
     revoke_parser = subparsers.add_parser(
         "relation-revoke", help="Explicitly revoke an active Relation Record"
     )
@@ -425,6 +467,36 @@ def main(argv: list[str] | None = None) -> int:
                 args.vault,
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,
+            )
+        elif args.command == "maintain-review-plan":
+            payload = plan_source_review(
+                args.vault,
+                identity=args.identity,
+            )
+        elif args.command == "maintain-review-source":
+            payload = review_source(
+                args.vault,
+                identity=args.identity,
+                source_locator=args.source,
+                basis_source_id=args.basis_source_id,
+                basis_revision=args.basis_revision,
+                basis_fingerprint=args.basis_fingerprint,
+                unknown=args.unknown,
+                observed_source_id=args.observed_source_id,
+                observed_revision=args.observed_revision,
+                observed_fingerprint=args.observed_fingerprint,
+                evidence=args.evidence,
+            )
+        elif args.command == "maintain-inspect-review-candidate":
+            payload = inspect_review_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+            )
+        elif args.command == "maintain-reject-review-candidate":
+            payload = reject_review_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+                confirmed_rejection=args.confirmed_rejection,
             )
         else:
             payload = revoke_relation(
