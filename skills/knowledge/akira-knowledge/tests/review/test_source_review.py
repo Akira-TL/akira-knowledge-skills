@@ -174,6 +174,42 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
         self.assertEqual(0, finding_count)
         self.assertEqual(0, candidate_count)
 
+    def test_review_plan_reuses_latest_verified_source_observation_as_future_basis(self) -> None:
+        reviewed = self.create_changed_candidate()
+        self.assertEqual("changed", reviewed["source_state"])
+
+        unknown = json.loads(
+            self.review_source(
+                "--basis-source-id", "doi:10.1000/example",
+                "--basis-revision", "v2",
+                "--basis-fingerprint", "sha256:new",
+                "--unknown",
+                "--evidence", "Temporary network failure after the verified v2 observation.",
+            ).stdout
+        )
+        self.assertEqual("unknown", unknown["source_state"])
+
+        planned = json.loads(
+            self.run_cli(
+                "maintain-review-plan",
+                "--vault", str(self.vault),
+                "--identity", self.asset_identity,
+            ).stdout
+        )
+        source = planned["sources"][0]
+        self.assertEqual(
+            {
+                "source_id": "doi:10.1000/example",
+                "revision": "v2",
+                "fingerprint": "sha256:new",
+            },
+            {
+                "source_id": source["last_verified"]["source_id"],
+                "revision": source["last_verified"]["revision"],
+                "fingerprint": source["last_verified"]["fingerprint"],
+            },
+        )
+
     def test_candidate_revalidation_marks_stale_when_target_authority_changes(self) -> None:
         reviewed = self.create_changed_candidate()
         candidate_id = str(reviewed["candidate"]["candidate_id"])

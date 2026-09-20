@@ -132,7 +132,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-review-
   --identity <knowledge-asset-id>
 ```
 
-该计划只返回当前 target identity / revision / fingerprint / canonical locator、当前 lifecycle，以及从既有 material provenance 链确定性得到的 Source locator；不会创建 finding / candidate，也不会修改语义 Authority。
+该计划只返回当前 target identity / revision / fingerprint / canonical locator、当前 lifecycle，以及从既有 material provenance 链确定性得到的 Source locator；若该 Source 之前已有可验证的 `changed` / `unchanged` observation，还返回最近一次 `last_verified` source identity / revision / fingerprint / evidence，供下一轮比较直接作为可靠 basis。临时 `unknown` finding 不覆盖最近一次已验证 observation。计划不会创建 finding / candidate，也不会修改语义 Authority。
 
 当前 Agent 再使用执行时真实可用且适合每个 Source 的访问能力逐项完成核验。确定性后端不自行联网，也不接受单纯的“changed=true”结论；调用方必须提供此次实际比较的 basis / observed Source identity、revision、fingerprint 与证据。
 

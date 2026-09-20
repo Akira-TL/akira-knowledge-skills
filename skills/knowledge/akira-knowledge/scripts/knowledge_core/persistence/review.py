@@ -139,15 +139,43 @@ def list_target_sources(
         """,
         (target_identity,),
     ).fetchall()
-    return [
-        {
-            "material_identity": str(row["material_identity"]),
-            "material_revision": int(row["material_revision"]),
-            "source_locator": str(row["source_locator"]),
-            "captured_at": str(row["captured_at"]),
-        }
-        for row in rows
-    ]
+    sources: list[dict[str, object]] = []
+    for row in rows:
+        source_locator = str(row["source_locator"])
+        verified = conn.execute(
+            """
+            SELECT observed_source_id, observed_revision, observed_fingerprint,
+                   evidence, created_at
+            FROM review_findings
+            WHERE target_identity = ?
+              AND source_locator = ?
+              AND source_state IN ('changed', 'unchanged')
+            ORDER BY created_at DESC, finding_id DESC
+            LIMIT 1
+            """,
+            (target_identity, source_locator),
+        ).fetchone()
+        last_verified = (
+            None
+            if verified is None
+            else {
+                "source_id": str(verified["observed_source_id"]),
+                "revision": str(verified["observed_revision"]),
+                "fingerprint": str(verified["observed_fingerprint"]),
+                "evidence": str(verified["evidence"]),
+                "verified_at": str(verified["created_at"]),
+            }
+        )
+        sources.append(
+            {
+                "material_identity": str(row["material_identity"]),
+                "material_revision": int(row["material_revision"]),
+                "source_locator": source_locator,
+                "captured_at": str(row["captured_at"]),
+                "last_verified": last_verified,
+            }
+        )
+    return sources
 
 
 def source_in_target_provenance(
