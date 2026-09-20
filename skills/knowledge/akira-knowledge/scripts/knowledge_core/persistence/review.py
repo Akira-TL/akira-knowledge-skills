@@ -255,9 +255,12 @@ def migrate_schema_v4_to_v5(conn: sqlite3.Connection) -> None:
                 OR (source_finding_id IS NOT NULL
                     AND evidence_basis_identity IS NOT NULL
                     AND evidence_basis_revision IS NOT NULL
+                    AND evidence_basis_revision >= 1
                     AND evidence_basis_fingerprint IS NOT NULL)
             ),
-            FOREIGN KEY (source_finding_id) REFERENCES review_findings(finding_id) ON DELETE RESTRICT
+            FOREIGN KEY (relation_identity) REFERENCES relation_records(identity) ON DELETE RESTRICT,
+            FOREIGN KEY (source_finding_id) REFERENCES review_findings(finding_id) ON DELETE RESTRICT,
+            FOREIGN KEY (evidence_basis_identity) REFERENCES objects(identity) ON DELETE RESTRICT
         );
         CREATE INDEX relation_maintenance_candidates_status_idx
             ON relation_maintenance_candidates(status);
