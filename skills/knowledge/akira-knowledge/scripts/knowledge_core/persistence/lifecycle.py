@@ -31,6 +31,10 @@ def migrate_schema_v2_to_v3(conn: sqlite3.Connection) -> None:
             status TEXT NOT NULL CHECK (status IN ('current', 'retired', 'superseded')),
             superseded_by TEXT,
             updated_at TEXT NOT NULL,
+            CHECK (
+                (status = 'superseded' AND superseded_by IS NOT NULL)
+                OR (status != 'superseded' AND superseded_by IS NULL)
+            ),
             FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT,
             FOREIGN KEY (superseded_by) REFERENCES objects(identity) ON DELETE RESTRICT
         );
@@ -49,6 +53,10 @@ def migrate_schema_v2_to_v3(conn: sqlite3.Connection) -> None:
             reason TEXT NOT NULL,
             superseded_by TEXT,
             recorded_at TEXT NOT NULL,
+            CHECK (
+                (status = 'superseded' AND superseded_by IS NOT NULL)
+                OR (status != 'superseded' AND superseded_by IS NULL)
+            ),
             PRIMARY KEY (identity, revision),
             FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT,
             FOREIGN KEY (superseded_by) REFERENCES objects(identity) ON DELETE RESTRICT
@@ -68,10 +76,20 @@ def migrate_schema_v2_to_v3(conn: sqlite3.Connection) -> None:
             target_identity TEXT NOT NULL,
             base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
             replacement_identity TEXT,
-            replacement_revision INTEGER,
+            replacement_revision INTEGER CHECK (
+                replacement_revision IS NULL OR replacement_revision >= 1
+            ),
             reason TEXT NOT NULL,
             created_at TEXT NOT NULL,
             decided_at TEXT,
+            CHECK (
+                (proposal_kind = 'supersede'
+                    AND replacement_identity IS NOT NULL
+                    AND replacement_revision IS NOT NULL)
+                OR (proposal_kind = 'retire'
+                    AND replacement_identity IS NULL
+                    AND replacement_revision IS NULL)
+            ),
             FOREIGN KEY (target_identity) REFERENCES objects(identity) ON DELETE RESTRICT,
             FOREIGN KEY (replacement_identity) REFERENCES objects(identity) ON DELETE RESTRICT
         );
