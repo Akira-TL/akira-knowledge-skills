@@ -111,7 +111,11 @@ class DynamicViewsBlackBoxTests(unittest.TestCase):
         self.assertIn("note.akira_knowledge_status", text)
         self.assertIn("Retired Knowledge", text)
         self.assertIn('note.akira_knowledge_lifecycle == "retired"', text)
-        self.assertIn('note.akira_knowledge_lifecycle != "retired"', text)
+        self.assertIn(
+            '!file.hasProperty("akira_knowledge_lifecycle") || '
+            'note.akira_knowledge_lifecycle != "retired"',
+            text,
+        )
 
         marker = self.view_dir / ".akira-knowledge-projection"
         self.assertEqual("akira-knowledge-views:v1\n", marker.read_text(encoding="utf-8"))

@@ -296,7 +296,11 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("Retired Knowledge", text)
         self.assertIn('note.akira_knowledge_lifecycle == "retired"', text)
-        self.assertIn('note.akira_knowledge_lifecycle != "retired"', text)
+        self.assertIn(
+            '!file.hasProperty("akira_knowledge_lifecycle") || '
+            'note.akira_knowledge_lifecycle != "retired"',
+            text,
+        )
         self.assertEqual(before_revision, self.current_revision())
 
     def test_retire_requires_explicit_approval_and_moves_asset_out_of_current_scope(self) -> None:

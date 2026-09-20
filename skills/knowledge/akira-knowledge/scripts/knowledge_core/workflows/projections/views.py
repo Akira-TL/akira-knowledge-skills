@@ -26,7 +26,7 @@ views:
     filters:
       and:
         - 'note.akira_knowledge_kind == "knowledge_asset"'
-        - 'note.akira_knowledge_lifecycle != "retired"'
+        - '!file.hasProperty("akira_knowledge_lifecycle") || note.akira_knowledge_lifecycle != "retired"'
     order:
       - file.name
   - type: table
