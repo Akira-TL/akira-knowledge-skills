@@ -119,6 +119,36 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
         )
         self.assertEqual("retired", self.lifecycle())
 
+    def test_unknown_database_schema_fails_before_any_lifecycle_migration(self) -> None:
+        with sqlite3.connect(self.database) as conn:
+            conn.execute("DROP TABLE lifecycle_proposals")
+            conn.execute("DROP TABLE knowledge_asset_lifecycle_events")
+            conn.execute("DROP TABLE knowledge_asset_lifecycle")
+            conn.execute(
+                "UPDATE schema_meta SET value = '999' WHERE key = 'schema_version'"
+            )
+            conn.commit()
+
+        failed = self.run_cli(
+            "retrieve-exact",
+            "--vault", str(self.vault),
+            "--identity", self.identity,
+            expect=2,
+        )
+
+        self.assertIn("unsupported SQLite schema version", failed.stderr)
+        with sqlite3.connect(self.database) as conn:
+            lifecycle_tables = conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type = 'table' AND name LIKE 'knowledge_asset_lifecycle%'"
+            ).fetchall()
+            proposal_table = conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type = 'table' AND name = 'lifecycle_proposals'"
+            ).fetchall()
+        self.assertEqual([], lifecycle_tables)
+        self.assertEqual([], proposal_table)
+
     def test_v1_database_migrates_current_lifecycle_without_rewriting_markdown(self) -> None:
         before = self.note.read_bytes()
         with sqlite3.connect(self.database) as conn:

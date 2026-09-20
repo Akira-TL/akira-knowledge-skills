@@ -143,6 +143,20 @@ def connect(vault: Path) -> sqlite3.Connection:
 
 
 def initialize_schema(conn: sqlite3.Connection) -> None:
+    schema_meta_exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_meta'"
+    ).fetchone()
+    if schema_meta_exists is not None:
+        existing = conn.execute(
+            "SELECT value FROM schema_meta WHERE key = 'schema_version'"
+        ).fetchone()
+        existing_version = None if existing is None else str(existing["value"])
+        if existing_version not in {None, "1", str(DB_SCHEMA_VERSION)}:
+            raise StorageError(
+                f"unsupported SQLite schema version {existing_version!r}; "
+                f"expected 1 or {DB_SCHEMA_VERSION}"
+            )
+
     conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS schema_meta (
