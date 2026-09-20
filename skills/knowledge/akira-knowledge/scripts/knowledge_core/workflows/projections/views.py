@@ -4,6 +4,7 @@ from pathlib import Path
 
 from knowledge_core import storage
 from knowledge_core.common import BootstrapError, _vault_root, _write_atomic
+from knowledge_core.resolution import resolve_objects
 
 VIEW_DIR_NAME = "Akira Knowledge Views"
 VIEW_FILE_NAME = "Akira Knowledge.base"
@@ -60,6 +61,7 @@ def rebuild_dynamic_views(vault: Path) -> dict[str, object]:
     try:
         storage.initialize_schema(conn)
         conn.commit()
+        resolve_objects(root, conn)
     finally:
         conn.close()
 

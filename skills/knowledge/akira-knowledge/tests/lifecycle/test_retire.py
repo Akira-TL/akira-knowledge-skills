@@ -117,6 +117,16 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
             "lifecycle Property disagrees with structured Authority",
             failed.stderr,
         )
+        view_failed = self.run_cli(
+            "views-rebuild",
+            "--vault", str(self.vault),
+            expect=2,
+        )
+        self.assertIn(
+            "lifecycle Property disagrees with structured Authority",
+            view_failed.stderr,
+        )
+        self.assertFalse((self.vault / "Akira Knowledge Views").exists())
         self.assertEqual("retired", self.lifecycle())
 
     def test_unknown_database_schema_fails_before_any_lifecycle_migration(self) -> None:
