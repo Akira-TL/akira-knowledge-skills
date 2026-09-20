@@ -206,10 +206,10 @@ class RetrievalBlackBoxTests(unittest.TestCase):
         result = self.run_cli(
             "retrieve-filter",
             "--vault", str(self.vault),
-            "--scope", "superseded",
+            "--scope", "archived",
             expect=2,
         )
-        self.assertIn("Unsupported retrieval scope: superseded", result.stderr)
+        self.assertIn("Unsupported retrieval scope: archived", result.stderr)
         self.assertEqual(before, self.seed.read_bytes())
         with sqlite3.connect(self.database) as conn:
             after_rows = conn.execute(

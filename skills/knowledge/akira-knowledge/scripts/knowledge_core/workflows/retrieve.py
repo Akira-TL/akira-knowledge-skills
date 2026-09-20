@@ -5,6 +5,7 @@ import sqlite3
 from typing import Mapping, Sequence
 
 from knowledge_core import storage
+from knowledge_core.persistence import lifecycle as lifecycle_store
 from knowledge_core.projections import search as search_projection
 from knowledge_core.common import BootstrapError, _vault_root
 from knowledge_core.markdown import AK_ID, AK_KIND, AK_LIFECYCLE, AK_STATUS, searchable_text
@@ -13,7 +14,13 @@ from knowledge_core.resolution import ResolvedObject, resolve_object, resolve_ob
 SCOPE_CURRENT = "current"
 SCOPE_MATERIAL = "material"
 SCOPE_RETIRED = "retired"
-_SUPPORTED_SCOPES = (SCOPE_CURRENT, SCOPE_MATERIAL, SCOPE_RETIRED)
+SCOPE_SUPERSEDED = "superseded"
+_SUPPORTED_SCOPES = (
+    SCOPE_CURRENT,
+    SCOPE_MATERIAL,
+    SCOPE_RETIRED,
+    SCOPE_SUPERSEDED,
+)
 
 
 def _normalize_scopes(scopes: Sequence[str] | None) -> tuple[str, ...]:
@@ -23,7 +30,7 @@ def _normalize_scopes(scopes: Sequence[str] | None) -> tuple[str, ...]:
         raise BootstrapError(
             "Unsupported retrieval scope: "
             + ", ".join(unsupported)
-            + "; supported scopes are current, material, and retired"
+            + "; supported scopes are current, material, retired, and superseded"
         )
     if not requested:
         raise BootstrapError("Retrieval scope must not be empty")
@@ -36,7 +43,7 @@ def _scope_allows(
     scopes: Sequence[str],
 ) -> bool:
     if obj.kind == "knowledge_asset":
-        lifecycle = storage.get_knowledge_asset_lifecycle(conn, obj.identity)
+        lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(conn, obj.identity)
         if lifecycle is None:
             raise BootstrapError(
                 f"Knowledge asset lifecycle does not exist: {obj.identity}"
@@ -44,6 +51,8 @@ def _scope_allows(
         if SCOPE_CURRENT in scopes and lifecycle == "current":
             return True
         if SCOPE_RETIRED in scopes and lifecycle == "retired":
+            return True
+        if SCOPE_SUPERSEDED in scopes and lifecycle == "superseded":
             return True
         return False
     if SCOPE_MATERIAL in scopes and obj.kind == "material_record":

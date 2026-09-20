@@ -1,11 +1,11 @@
 ---
 name: knowledge-maintain
-description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset 明确退役；在写入前阻止陈旧 revision 覆盖较新的 Authority。
+description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset 退役 / supersede lifecycle 治理；在写入前阻止陈旧 revision 覆盖较新的 Authority。
 ---
 
 # Knowledge Maintain
 
-`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的明确退役闭环。系统性回顾、自动发现陈旧/冲突关系、Source 更新监控、supersede、批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的明确退役与 supersede lifecycle 闭环。系统性回顾、自动发现陈旧/冲突关系、Source 更新监控、批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
 
 ## 1. 同步当前对象状态
 
@@ -87,9 +87,42 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-r
 - 显式 `retired` scope 仍可通过 Exact / Filter / task retrieval 回读同一 identity；
 - Material Record 的 `待处理 / 已处理` 状态不受影响。
 
-退役不等于 supersede；替代关系与更完整的长期 Review 仍由后续 0.4 实现票完成。
+退役不等于 supersede；退役不记录 replacement target。
 
-## 5. Relation Record 显式撤回
+## 5. Knowledge Asset 明确替代
+
+用户明确决定一个当前 Knowledge Asset 已由另一个当前 Knowledge Asset 承担后续职责时，先同时绑定旧对象与 replacement 的实际 revision：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-propose-supersede \
+  --vault <vault> \
+  --identity <old-knowledge-asset-id> \
+  --base-revision <old-actually-read-revision> \
+  --replacement-id <replacement-knowledge-asset-id> \
+  --replacement-revision <replacement-actually-read-revision> \
+  --reason <supersede-reason>
+```
+
+proposal 创建要求两端都是不同且当前有效的 Knowledge Asset。用户明确批准后执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-supersede \
+  --vault <vault> \
+  --proposal-id <proposal-id> \
+  --confirmed-approval
+```
+
+执行前重新同步旧对象与 replacement；任一 revision 或 lifecycle 已变化都 fail closed。成功 supersede 后：
+
+- 旧 stable identity、canonical Markdown、history 与既有 provenance 保留；
+- 只推进旧对象 revision，replacement identity / revision 保持独立；
+- structured lifecycle Authority 记录旧对象为 `superseded`，并记录 replacement stable identity 与 reason；
+- Markdown 中 `akira_knowledge_lifecycle: superseded` 只是机器维护镜像；
+- 默认 `current` scope 排除旧对象；显式 `superseded` scope 仍可回读旧 identity；
+- replacement 继续作为自己的 `current` Knowledge Asset；
+- 已非 current 的对象不会被 retire / supersede 命令静默改写成另一 lifecycle。
+
+## 6. Relation Record 显式撤回
 
 用户明确要求撤回一个当前正式关系时，调用方必须先读取该 Relation Record 的当前 revision，并在确认后执行：
 
@@ -117,7 +150,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 撤回是用户主动纠错能力，不等于系统自动判断关系已经陈旧或冲突。自动 stale / conflict 发现、Source 更新影响检查、批量 Review 与自动生成撤回候选继续属于 `0.4.x`。
 
-## 6. 停止边界
+## 7. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 

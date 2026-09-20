@@ -9,12 +9,14 @@ import sys
 from knowledge_core.service import (
     BootstrapError,
     apply_retire_proposal,
+    apply_supersede_proposal,
     apply_update_proposal,
     approve_curate_proposal,
     approve_relation_candidate,
     capture_material,
     create_curate_proposal,
     create_retire_proposal,
+    create_supersede_proposal,
     create_relation_candidate,
     inspect_relation_candidate,
     inspect_vault,
@@ -124,7 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
     exact_parser.add_argument(
         "--scope",
         action="append",
-        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+        help="Retrieval scope; repeat to combine current, material, retired, and superseded. Defaults to current.",
     )
 
     filter_parser = subparsers.add_parser(
@@ -136,7 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
     filter_parser.add_argument(
         "--scope",
         action="append",
-        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+        help="Retrieval scope; repeat to combine current, material, retired, and superseded. Defaults to current.",
     )
     filter_parser.add_argument(
         "--property",
@@ -153,7 +155,7 @@ def build_parser() -> argparse.ArgumentParser:
     full_text_parser.add_argument(
         "--scope",
         action="append",
-        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+        help="Retrieval scope; repeat to combine current, material, retired, and superseded. Defaults to current.",
     )
 
     task_parser = subparsers.add_parser(
@@ -164,7 +166,7 @@ def build_parser() -> argparse.ArgumentParser:
     task_parser.add_argument(
         "--scope",
         action="append",
-        help="Retrieval scope; repeat to combine current and material. Defaults to current.",
+        help="Retrieval scope; repeat to combine current, material, retired, and superseded. Defaults to current.",
     )
     task_parser.add_argument("--exact", action="append", default=[])
     task_parser.add_argument("--query", action="append", default=[])
@@ -224,6 +226,25 @@ def build_parser() -> argparse.ArgumentParser:
     retire_apply_parser.add_argument("--vault", required=True, type=Path)
     retire_apply_parser.add_argument("--proposal-id", required=True)
     retire_apply_parser.add_argument("--confirmed-approval", action="store_true")
+
+    supersede_propose_parser = subparsers.add_parser(
+        "maintain-propose-supersede",
+        help="Create a revision-bound proposal to supersede one current Knowledge Asset",
+    )
+    supersede_propose_parser.add_argument("--vault", required=True, type=Path)
+    supersede_propose_parser.add_argument("--identity", required=True)
+    supersede_propose_parser.add_argument("--base-revision", required=True, type=int)
+    supersede_propose_parser.add_argument("--replacement-id", required=True)
+    supersede_propose_parser.add_argument("--replacement-revision", required=True, type=int)
+    supersede_propose_parser.add_argument("--reason", required=True)
+
+    supersede_apply_parser = subparsers.add_parser(
+        "maintain-apply-supersede",
+        help="Apply an explicitly approved Knowledge Asset supersede proposal",
+    )
+    supersede_apply_parser.add_argument("--vault", required=True, type=Path)
+    supersede_apply_parser.add_argument("--proposal-id", required=True)
+    supersede_apply_parser.add_argument("--confirmed-approval", action="store_true")
 
     revoke_parser = subparsers.add_parser(
         "relation-revoke", help="Explicitly revoke an active Relation Record"
@@ -386,6 +407,21 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "maintain-apply-retire":
             payload = apply_retire_proposal(
+                args.vault,
+                proposal_id=args.proposal_id,
+                confirmed_approval=args.confirmed_approval,
+            )
+        elif args.command == "maintain-propose-supersede":
+            payload = create_supersede_proposal(
+                args.vault,
+                identity=args.identity,
+                expected_base_revision=args.base_revision,
+                replacement_identity=args.replacement_id,
+                expected_replacement_revision=args.replacement_revision,
+                reason=args.reason,
+            )
+        elif args.command == "maintain-apply-supersede":
+            payload = apply_supersede_proposal(
                 args.vault,
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,

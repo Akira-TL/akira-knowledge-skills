@@ -6,6 +6,7 @@ import sqlite3
 from typing import Mapping
 
 from knowledge_core import storage
+from knowledge_core.persistence import lifecycle as lifecycle_store
 from knowledge_core.common import BootstrapError, _safe_relative
 from knowledge_core.markdown import (
     AK_ID,
@@ -72,7 +73,7 @@ def resolve_objects(root: Path, conn: sqlite3.Connection) -> dict[str, ResolvedO
                 f"Managed Markdown object kind disagrees with registry: {path.relative_to(root)}"
             )
         if record.kind == "knowledge_asset":
-            lifecycle = storage.get_knowledge_asset_lifecycle(conn, identity)
+            lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(conn, identity)
             if lifecycle is None:
                 raise BootstrapError(
                     f"Knowledge asset lifecycle is missing from structured Authority: {identity}"

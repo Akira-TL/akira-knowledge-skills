@@ -16,6 +16,7 @@ from knowledge_core.markdown import (
     replace_knowledge_property,
     set_knowledge_property,
 )
+from knowledge_core.persistence import lifecycle as lifecycle_store
 from knowledge_core.persistence import relations as relation_store
 from knowledge_core.resolution import ResolvedObject, resolve_object
 
@@ -331,7 +332,7 @@ def create_retire_proposal(
             target = sync_object_in_connection(root, conn, identity)
         if target.kind != "knowledge_asset":
             raise BootstrapError(f"Knowledge asset does not exist: {identity}")
-        lifecycle = storage.get_knowledge_asset_lifecycle(conn, identity)
+        lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(conn, identity)
         if lifecycle is None:
             raise BootstrapError(f"Knowledge asset lifecycle does not exist: {identity}")
         if lifecycle != "current":
@@ -344,7 +345,7 @@ def create_retire_proposal(
 
         proposal_id = str(uuid7())
         with storage.transaction(conn):
-            storage.insert_lifecycle_proposal(
+            lifecycle_store.insert_lifecycle_proposal(
                 conn,
                 proposal_id=proposal_id,
                 proposal_kind="retire",
@@ -386,7 +387,7 @@ def apply_retire_proposal(
     try:
         storage.initialize_schema(conn)
         conn.commit()
-        proposal = storage.get_lifecycle_proposal(conn, proposal_id)
+        proposal = lifecycle_store.get_lifecycle_proposal(conn, proposal_id)
         if proposal is None:
             raise BootstrapError(f"Lifecycle proposal does not exist: {proposal_id}")
         if proposal.status != "pending" or proposal.proposal_kind != "retire":
@@ -400,7 +401,7 @@ def apply_retire_proposal(
                 "Retire proposal is stale because target Authority changed since its base revision; "
                 "create a new proposal from the current revision"
             )
-        lifecycle = storage.get_knowledge_asset_lifecycle(conn, proposal.target_identity)
+        lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(conn, proposal.target_identity)
         if lifecycle != "current":
             raise BootstrapError("Retire proposal target is no longer current")
 
@@ -425,7 +426,7 @@ def apply_retire_proposal(
         try:
             with storage.transaction(conn):
                 _write_atomic(target_path, transformed)
-                new_revision = storage.apply_retire_lifecycle_proposal(
+                new_revision = lifecycle_store.apply_retire_lifecycle_proposal(
                     conn,
                     proposal_id=proposal_id,
                     identity=proposal.target_identity,
@@ -450,6 +451,193 @@ def apply_retire_proposal(
         "canonical_locator": target.locator,
         "lifecycle": "retired",
         "revision": new_revision,
+    }
+
+
+def create_supersede_proposal(
+    vault: Path,
+    *,
+    identity: str,
+    expected_base_revision: int,
+    replacement_identity: str,
+    expected_replacement_revision: int,
+    reason: str,
+) -> dict[str, object]:
+    root = _vault_root(vault)
+    if expected_base_revision < 1 or expected_replacement_revision < 1:
+        raise BootstrapError("Supersede proposal revisions must be at least 1")
+    if identity == replacement_identity:
+        raise BootstrapError("Knowledge asset cannot supersede itself")
+    if not reason.strip():
+        raise BootstrapError("Supersede proposal requires a non-empty reason")
+    if not storage.db_path(root).exists():
+        raise BootstrapError("Knowledge structured Authority store is missing")
+
+    conn = storage.connect(root)
+    try:
+        storage.initialize_schema(conn)
+        conn.commit()
+        with storage.transaction(conn):
+            target = sync_object_in_connection(root, conn, identity)
+            replacement = sync_object_in_connection(root, conn, replacement_identity)
+
+        if target.kind != "knowledge_asset":
+            raise BootstrapError(f"Knowledge asset does not exist: {identity}")
+        if replacement.kind != "knowledge_asset":
+            raise BootstrapError(
+                f"Replacement Knowledge asset does not exist: {replacement_identity}"
+            )
+        lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(conn, identity)
+        replacement_lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(
+            conn, replacement_identity
+        )
+        if lifecycle != "current":
+            raise BootstrapError(f"Knowledge asset is not current: {identity}")
+        if replacement_lifecycle != "current":
+            raise BootstrapError(
+                f"Replacement Knowledge asset is not current: {replacement_identity}"
+            )
+        if target.revision != expected_base_revision:
+            raise BootstrapError(
+                "Target revision changed during supersede proposal preparation; "
+                "re-read current Authority and create a new proposal"
+            )
+        if replacement.revision != expected_replacement_revision:
+            raise BootstrapError(
+                "Replacement revision changed during supersede proposal preparation; "
+                "re-read current Authority and create a new proposal"
+            )
+
+        proposal_id = str(uuid7())
+        with storage.transaction(conn):
+            lifecycle_store.insert_lifecycle_proposal(
+                conn,
+                proposal_id=proposal_id,
+                proposal_kind="supersede",
+                target_identity=identity,
+                base_revision=expected_base_revision,
+                replacement_identity=replacement_identity,
+                replacement_revision=expected_replacement_revision,
+                reason=reason.strip(),
+            )
+    finally:
+        conn.close()
+
+    return {
+        "vault": str(root),
+        "proposal_id": proposal_id,
+        "proposal_kind": "supersede",
+        "status": "pending",
+        "target_identity": identity,
+        "base_revision": expected_base_revision,
+        "replacement_identity": replacement_identity,
+        "replacement_revision": expected_replacement_revision,
+        "current_lifecycle": lifecycle,
+        "proposed_lifecycle": "superseded",
+        "reason": reason.strip(),
+    }
+
+
+def apply_supersede_proposal(
+    vault: Path,
+    *,
+    proposal_id: str,
+    confirmed_approval: bool,
+) -> dict[str, object]:
+    root = _vault_root(vault)
+    if not confirmed_approval:
+        raise BootstrapError("Applying a supersede proposal requires explicit user approval")
+    if not storage.db_path(root).exists():
+        raise BootstrapError("Knowledge structured Authority store is missing")
+
+    conn = storage.connect(root)
+    target_path: Path | None = None
+    target_original: str | None = None
+    try:
+        storage.initialize_schema(conn)
+        conn.commit()
+        proposal = lifecycle_store.get_lifecycle_proposal(conn, proposal_id)
+        if proposal is None:
+            raise BootstrapError(f"Lifecycle proposal does not exist: {proposal_id}")
+        if proposal.status != "pending" or proposal.proposal_kind != "supersede":
+            raise BootstrapError(f"Supersede proposal is not pending: {proposal_id}")
+        if proposal.replacement_identity is None or proposal.replacement_revision is None:
+            raise BootstrapError("Supersede proposal is missing replacement basis")
+
+        target = _sync_and_commit(root, conn, proposal.target_identity)
+        replacement = _sync_and_commit(root, conn, proposal.replacement_identity)
+        if target.kind != "knowledge_asset":
+            raise BootstrapError("Supersede proposal target is not a knowledge asset")
+        if replacement.kind != "knowledge_asset":
+            raise BootstrapError("Supersede replacement is not a knowledge asset")
+        if (
+            target.revision != proposal.base_revision
+            or replacement.revision != proposal.replacement_revision
+        ):
+            raise BootstrapError(
+                "Supersede proposal is stale because target or replacement Authority "
+                "changed since proposal creation; create a new proposal from current revisions"
+            )
+        lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(
+            conn, proposal.target_identity
+        )
+        replacement_lifecycle = lifecycle_store.get_knowledge_asset_lifecycle(
+            conn, proposal.replacement_identity
+        )
+        if lifecycle != "current":
+            raise BootstrapError("Supersede proposal target is no longer current")
+        if replacement_lifecycle != "current":
+            raise BootstrapError("Supersede replacement is no longer current")
+
+        try:
+            transformed = set_knowledge_property(
+                target.text,
+                key=AK_LIFECYCLE,
+                value="superseded",
+            )
+        except MarkdownConflict as exc:
+            raise BootstrapError(
+                f"Cannot safely update lifecycle Property {target.locator}: {exc}"
+            ) from exc
+        transformed_fingerprint = authority_fingerprint(transformed)
+        if transformed_fingerprint != target.fingerprint:
+            raise BootstrapError(
+                "Lifecycle mirror unexpectedly changed human Authority fingerprint"
+            )
+
+        target_path = root / target.locator
+        target_original = target.text
+        try:
+            with storage.transaction(conn):
+                _write_atomic(target_path, transformed)
+                new_revision = lifecycle_store.apply_supersede_lifecycle_proposal(
+                    conn,
+                    proposal_id=proposal_id,
+                    identity=proposal.target_identity,
+                    replacement_identity=proposal.replacement_identity,
+                    locator=target.locator,
+                    fingerprint=transformed_fingerprint,
+                )
+        except Exception:
+            if target_path is not None and target_original is not None:
+                try:
+                    _write_atomic(target_path, target_original)
+                except OSError:
+                    pass
+            raise
+    finally:
+        conn.close()
+
+    return {
+        "vault": str(root),
+        "proposal_id": proposal_id,
+        "status": "applied",
+        "stable_identity": proposal.target_identity,
+        "replacement_identity": proposal.replacement_identity,
+        "canonical_locator": target.locator,
+        "lifecycle": "superseded",
+        "revision": new_revision,
+        "replacement_revision": replacement.revision,
     }
 
 

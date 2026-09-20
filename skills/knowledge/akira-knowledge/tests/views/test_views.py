@@ -100,7 +100,12 @@ class DynamicViewsBlackBoxTests(unittest.TestCase):
         self.assertTrue(payload["projection"])
         self.assertEqual("Akira Knowledge Views/Akira Knowledge.base", payload["view_file"])
         self.assertEqual(
-            ["Current Knowledge", "Retired Knowledge", "Materials"],
+            [
+                "Current Knowledge",
+                "Retired Knowledge",
+                "Superseded Knowledge",
+                "Materials",
+            ],
             payload["views"],
         )
 
@@ -110,10 +115,13 @@ class DynamicViewsBlackBoxTests(unittest.TestCase):
         self.assertIn('note.akira_knowledge_kind == "material_record"', text)
         self.assertIn("note.akira_knowledge_status", text)
         self.assertIn("Retired Knowledge", text)
+        self.assertIn("Superseded Knowledge", text)
         self.assertIn('note.akira_knowledge_lifecycle == "retired"', text)
+        self.assertIn('note.akira_knowledge_lifecycle == "superseded"', text)
         self.assertIn(
             '!file.hasProperty("akira_knowledge_lifecycle") || '
-            'note.akira_knowledge_lifecycle != "retired"',
+            '(note.akira_knowledge_lifecycle != "retired" && '
+            'note.akira_knowledge_lifecycle != "superseded")',
             text,
         )
 

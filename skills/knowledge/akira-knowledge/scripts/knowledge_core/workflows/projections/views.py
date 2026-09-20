@@ -27,7 +27,7 @@ views:
     filters:
       and:
         - 'note.akira_knowledge_kind == "knowledge_asset"'
-        - '!file.hasProperty("akira_knowledge_lifecycle") || note.akira_knowledge_lifecycle != "retired"'
+        - '!file.hasProperty("akira_knowledge_lifecycle") || (note.akira_knowledge_lifecycle != "retired" && note.akira_knowledge_lifecycle != "superseded")'
     order:
       - file.name
   - type: table
@@ -36,6 +36,14 @@ views:
       and:
         - 'note.akira_knowledge_kind == "knowledge_asset"'
         - 'note.akira_knowledge_lifecycle == "retired"'
+    order:
+      - file.name
+  - type: table
+    name: Superseded Knowledge
+    filters:
+      and:
+        - 'note.akira_knowledge_kind == "knowledge_asset"'
+        - 'note.akira_knowledge_lifecycle == "superseded"'
     order:
       - file.name
   - type: table
@@ -96,6 +104,11 @@ def rebuild_dynamic_views(vault: Path) -> dict[str, object]:
         "vault": str(root),
         "projection_directory": VIEW_DIR_NAME,
         "view_file": f"{VIEW_DIR_NAME}/{VIEW_FILE_NAME}",
-        "views": ["Current Knowledge", "Retired Knowledge", "Materials"],
+        "views": [
+            "Current Knowledge",
+            "Retired Knowledge",
+            "Superseded Knowledge",
+            "Materials",
+        ],
         "projection": True,
     }

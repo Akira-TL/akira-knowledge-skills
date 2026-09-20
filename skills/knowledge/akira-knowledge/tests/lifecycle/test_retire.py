@@ -188,15 +188,15 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
                 "SELECT status FROM knowledge_asset_lifecycle WHERE identity = ?",
                 (self.identity,),
             ).fetchone()[0]
-        self.assertEqual("2", schema_version)
+        self.assertEqual("3", schema_version)
         self.assertEqual("current", lifecycle)
 
-    def test_v2_missing_lifecycle_authority_fails_closed_instead_of_guessing_current(self) -> None:
+    def test_current_schema_missing_lifecycle_authority_fails_closed_instead_of_guessing_current(self) -> None:
         with sqlite3.connect(self.database) as conn:
             schema_version = conn.execute(
                 "SELECT value FROM schema_meta WHERE key = 'schema_version'"
             ).fetchone()[0]
-            self.assertEqual("2", schema_version)
+            self.assertEqual("3", schema_version)
             conn.execute(
                 "DELETE FROM knowledge_asset_lifecycle WHERE identity = ?",
                 (self.identity,),
@@ -328,7 +328,12 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
             ).stdout
         )
         self.assertEqual(
-            ["Current Knowledge", "Retired Knowledge", "Materials"],
+            [
+                "Current Knowledge",
+                "Retired Knowledge",
+                "Superseded Knowledge",
+                "Materials",
+            ],
             payload["views"],
         )
         text = (
@@ -338,7 +343,8 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
         self.assertIn('note.akira_knowledge_lifecycle == "retired"', text)
         self.assertIn(
             '!file.hasProperty("akira_knowledge_lifecycle") || '
-            'note.akira_knowledge_lifecycle != "retired"',
+            '(note.akira_knowledge_lifecycle != "retired" && '
+            'note.akira_knowledge_lifecycle != "superseded")',
             text,
         )
         self.assertEqual(before_revision, self.current_revision())
