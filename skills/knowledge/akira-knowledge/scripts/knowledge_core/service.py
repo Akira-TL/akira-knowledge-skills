@@ -24,6 +24,14 @@ from knowledge_core.workflows.governance.relation_candidates import (
     reject_relation_candidate,
 )
 from knowledge_core.workflows.retrieval_plan import retrieve_task_package
+from knowledge_core.workflows.governance.conflicts import (
+    inspect_conflict_candidate,
+    inspect_relation_maintenance_candidate,
+    propose_conflict,
+    propose_relation_maintenance,
+    reject_conflict_candidate,
+    reject_relation_maintenance_candidate,
+)
 from knowledge_core.workflows.governance.review import (
     inspect_review_candidate,
     plan_source_review,
@@ -45,15 +53,21 @@ __all__ = [
     "create_retire_proposal",
     "create_supersede_proposal",
     "create_relation_candidate",
+    "inspect_conflict_candidate",
     "inspect_relation_candidate",
+    "inspect_relation_maintenance_candidate",
     "inspect_review_candidate",
     "inspect_vault",
     "plan_source_review",
+    "propose_conflict",
+    "propose_relation_maintenance",
     "rebuild_full_text_projection",
     "rebuild_relation_graph",
     "register_notes",
     "reject_curate_proposal",
+    "reject_conflict_candidate",
     "reject_relation_candidate",
+    "reject_relation_maintenance_candidate",
     "reject_review_candidate",
     "retrieve_exact",
     "retrieve_filter",

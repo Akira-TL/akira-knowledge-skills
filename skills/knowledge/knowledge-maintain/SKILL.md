@@ -1,11 +1,11 @@
 ---
 name: knowledge-maintain
-description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset lifecycle 与 Source Review 治理；在写入前阻止陈旧 revision 覆盖较新的 Authority。
+description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset lifecycle、Source Review、conflict candidate 与 Relation maintenance Review；在写入前阻止陈旧 revision 覆盖较新的 Authority。
 ---
 
 # Knowledge Maintain
 
-`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle 与可验证 Source Review → stale candidate 闭环。跨知识冲突判断、Relation maintenance Review、批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate 与 Relation maintenance Review。批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
 
 ## 1. 同步当前对象状态
 
@@ -175,9 +175,67 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-reject-
   --confirmed-rejection
 ```
 
-Review Candidate 不提供直接“批准并改 Authority”的旁路。需要正文更新时继续进入 `knowledge-curate` 的 update proposal → approval；需要 retire / supersede 时继续使用本 Skill 的 lifecycle proposal。Relation stale / conflict Review 由后续 0.4 ticket 在既有 Relation Candidate / revoke 合同上扩展。
+Review Candidate 不提供直接“批准并改 Authority”的旁路。需要正文更新时继续进入 `knowledge-curate` 的 update proposal → approval；需要 retire / supersede 时继续使用本 Skill 的 lifecycle proposal。
 
-## 7. Relation Record 显式撤回
+## 7. Semantic Conflict Candidate
+
+当前主模型在实际读取两个或多个当前治理对象后，如果判断它们可能无法同时成立，只能形成待治理 conflict candidate，不直接修改任何 Authority：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-propose-conflict \
+  --vault <vault> \
+  --knowledge-id <optional-current-knowledge-id> \
+  --source-finding-id <optional-source-review-finding-id> \
+  --relation-id <optional-active-relation-id> \
+  --conflict <semantic-conflict-statement> \
+  --evidence <actual-review-evidence>
+```
+
+至少需要两个不同治理成员。当前支持的 member basis 为 current Knowledge Asset、Source Review finding 与 active Relation Record。Candidate 固定每个成员创建时实际读取的 identity / ref、revision、fingerprint 与 locator/basis；普通 wikilink、tag、全文共现或模型相似度本身不能自动升级成 conflict member，更不能因此创建、修改或撤回 Relation Record。
+
+重新检查：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-inspect-conflict \
+  --vault <vault> \
+  --candidate-id <candidate-id>
+```
+
+任一 Knowledge / Source finding basis / Relation revision 或 fingerprint 变化时，pending Candidate 转为 `stale`。用户明确拒绝：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-reject-conflict \
+  --vault <vault> \
+  --candidate-id <candidate-id> \
+  --confirmed-rejection
+```
+
+拒绝只改变 Candidate governance 状态，不修改 Knowledge / lifecycle / Relation Authority。当前实现不引入 ontology、inverse / symmetry / transitive inference 或自动规则推理。
+
+## 8. Relation maintenance Review
+
+对 active Relation Record 形成 stale / conflict maintenance candidate 时：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-propose-relation-maintenance \
+  --vault <vault> \
+  --relation-id <relation-id> \
+  --kind <relation_stale|relation_conflict> \
+  --source-finding-id <optional-source-review-finding-id> \
+  --evidence <review-evidence>
+```
+
+Candidate 固定 Relation identity / revision / deterministic fingerprint，以及本地 source / target endpoint revision / fingerprint；如果 Review 依赖一个 Source finding，还同时固定该 finding 的 target basis。inspect 时 relation revision/provenance、endpoint Authority 或绑定 evidence basis 任一变化都会使 pending Candidate 转为 `stale`：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-inspect-relation-maintenance \
+  --vault <vault> \
+  --candidate-id <candidate-id>
+```
+
+Relation maintenance Candidate 没有 apply 命令，也不能原地改变既有 source / type / target triple。真正需要撤回时继续使用 `relation-revoke --expected-revision`；需要新的 relation 语义时继续使用 `relation-propose → relation-approve`。用户也可以通过 `maintain-reject-relation-maintenance --confirmed-rejection` 拒绝候选而不修改 Relation Authority。
+
+## 9. Relation Record 显式撤回
 
 用户明确要求撤回一个当前正式关系时，调用方必须先读取该 Relation Record 的当前 revision，并在确认后执行：
 
@@ -203,9 +261,9 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 对已经 revoked 的关系，如果调用方提供的 expected revision 正好等于当前 revision，则作为幂等操作返回，不再次推进 revision；若使用旧 revision 重复操作，仍按 stale-write 规则 fail closed。
 
-撤回是用户主动纠错能力，不等于系统自动判断 Relation Record 已经陈旧或冲突。Knowledge Asset 的 Source Review / stale candidate 已在本版本实现；Relation stale / conflict Review、批量 Review 与关系维护候选继续由后续 `0.4.x` ticket 扩展，并仍复用既有 Relation Candidate / revoke 合同。
+撤回是实际 Relation Authority mutation；Relation stale / conflict Review 只产生待治理 Candidate。两者边界保持分离，Review 不得绕过 expected-revision revoke 或 Relation Candidate / approval 合同。批量 Review 继续由后续 `0.4.x` ticket 扩展。
 
-## 8. 停止边界
+## 10. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 

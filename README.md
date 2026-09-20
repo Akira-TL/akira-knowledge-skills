@@ -24,8 +24,8 @@ Akira Knowledge 面向显式、持久、可检查、可更新和可复用的知�
 - 0.1.x：实现完成，发布就绪门禁已通过。
 - 0.2.x：实现完成，独立黑盒与升级兼容门禁已通过。
 - 0.3.x：实现完成，最终独立黑盒与 0.2 → 0.3 原地升级兼容门禁已通过。
-- 0.4.x：实现中；当前已完成 Knowledge Asset 明确退役 / supersede lifecycle、`retired` / `superseded` Retrieval Scope、对应 Bases 视图，以及可验证 Source Review → stale maintenance candidate；其余 Long-term Maintenance 能力仍按 #39 后续实现票推进。
-- 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础、显式 Capture 到材料记录、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval、既有知识 revision-safe update、显式 Retrieval Scope、按 stable identity 去重并保留多路径命中依据的任务相关知识集合、Relation Candidate 治理与 endpoint 陈旧保护、用户明确 approval 后的 Relation Record Authority 创建、同 triple 去重与 provenance 增补、relation expected-revision 撤回与默认 traversal 排除、Knowledge Asset revision-safe retire / supersede、可验证 Source Review 与 revision-bound stale candidate、可删除重建且不拥有 Authority 的 Obsidian Bases 动态视图，以及只展示 active Relation Record 的 Obsidian Relation Graph Projection。
+- 0.4.x：实现中；当前已完成 Knowledge Asset 明确退役 / supersede lifecycle、`retired` / `superseded` Retrieval Scope、对应 Bases 视图、可验证 Source Review → stale maintenance candidate，以及 semantic conflict / Relation maintenance Review；其余 Long-term Maintenance 能力仍按 #39 后续实现票推进。
+- 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础、显式 Capture 到材料记录、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval、既有知识 revision-safe update、显式 Retrieval Scope、按 stable identity 去重并保留多路径命中依据的任务相关知识集合、Relation Candidate 治理与 endpoint 陈旧保护、用户明确 approval 后的 Relation Record Authority 创建、同 triple 去重与 provenance 增补、relation expected-revision 撤回与默认 traversal 排除、Knowledge Asset revision-safe retire / supersede、可验证 Source Review 与 revision-bound stale candidate、semantic conflict candidate、Relation maintenance Review、可删除重建且不拥有 Authority 的 Obsidian Bases 动态视图，以及只展示 active Relation Record 的 Obsidian Relation Graph Projection。
 - 发布状态：尚未创建 GitHub tag / release，也未执行远端安装发布。
 
 ## Development

@@ -7,6 +7,72 @@ from knowledge_core import storage
 
 
 @dataclass(frozen=True)
+class ConflictCandidateRecord:
+    candidate_id: str
+    status: str
+    conflict: str
+    evidence: str
+    created_at: str
+    decided_at: str | None
+
+
+@dataclass(frozen=True)
+class ConflictCandidateMemberRecord:
+    candidate_id: str
+    ordinal: int
+    member_kind: str
+    member_ref: str
+    basis_identity: str
+    revision: int
+    fingerprint: str
+    canonical_locator: str
+
+
+@dataclass(frozen=True)
+class RelationMaintenanceCandidateRecord:
+    candidate_id: str
+    candidate_kind: str
+    status: str
+    relation_identity: str
+    relation_revision: int
+    relation_fingerprint: str
+    source_kind: str
+    source_ref: str
+    source_revision: int | None
+    source_fingerprint: str | None
+    target_kind: str
+    target_ref: str
+    target_revision: int | None
+    target_fingerprint: str | None
+    evidence: str
+    source_finding_id: str | None
+    evidence_basis_identity: str | None
+    evidence_basis_revision: int | None
+    evidence_basis_fingerprint: str | None
+    created_at: str
+    decided_at: str | None
+
+
+@dataclass(frozen=True)
+class SourceFindingRecord:
+    finding_id: str
+    finding_kind: str
+    source_state: str
+    target_identity: str
+    target_revision: int
+    target_fingerprint: str
+    source_locator: str
+    basis_source_id: str
+    basis_revision: str
+    basis_fingerprint: str
+    observed_source_id: str | None
+    observed_revision: str | None
+    observed_fingerprint: str | None
+    evidence: str
+    created_at: str
+
+
+@dataclass(frozen=True)
 class MaintenanceCandidateRecord:
     candidate_id: str
     candidate_kind: str
@@ -28,6 +94,13 @@ class MaintenanceCandidateRecord:
 
 
 _REQUIRED_TABLES = ("review_findings", "maintenance_candidates")
+_V5_REQUIRED_TABLES = (
+    "review_findings",
+    "maintenance_candidates",
+    "conflict_candidates",
+    "conflict_candidate_members",
+    "relation_maintenance_candidates",
+)
 
 
 def migrate_schema_to_v4(conn: sqlite3.Connection) -> None:
@@ -99,6 +172,125 @@ def migrate_schema_to_v4(conn: sqlite3.Connection) -> None:
         COMMIT;
         """
     )
+
+
+def migrate_schema_v4_to_v5(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        BEGIN IMMEDIATE;
+
+        CREATE TABLE conflict_candidates (
+            candidate_id TEXT PRIMARY KEY,
+            status TEXT NOT NULL CHECK (status IN ('pending', 'rejected', 'stale')),
+            conflict TEXT NOT NULL,
+            evidence TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            decided_at TEXT
+        );
+        CREATE INDEX conflict_candidates_status_idx
+            ON conflict_candidates(status);
+
+        CREATE TABLE conflict_candidate_members (
+            candidate_id TEXT NOT NULL,
+            ordinal INTEGER NOT NULL,
+            member_kind TEXT NOT NULL CHECK (
+                member_kind IN ('knowledge_asset', 'source_finding', 'relation_record')
+            ),
+            member_ref TEXT NOT NULL,
+            basis_identity TEXT NOT NULL,
+            revision INTEGER NOT NULL CHECK (revision >= 1),
+            fingerprint TEXT NOT NULL,
+            canonical_locator TEXT NOT NULL,
+            PRIMARY KEY (candidate_id, ordinal),
+            FOREIGN KEY (candidate_id) REFERENCES conflict_candidates(candidate_id) ON DELETE RESTRICT
+        );
+        CREATE INDEX conflict_candidate_members_ref_idx
+            ON conflict_candidate_members(member_kind, member_ref);
+
+        CREATE TABLE relation_maintenance_candidates (
+            candidate_id TEXT PRIMARY KEY,
+            candidate_kind TEXT NOT NULL CHECK (
+                candidate_kind IN ('relation_stale', 'relation_conflict')
+            ),
+            status TEXT NOT NULL CHECK (status IN ('pending', 'rejected', 'stale')),
+            relation_identity TEXT NOT NULL,
+            relation_revision INTEGER NOT NULL CHECK (relation_revision >= 1),
+            relation_fingerprint TEXT NOT NULL,
+            source_kind TEXT NOT NULL CHECK (source_kind IN ('knowledge', 'external')),
+            source_ref TEXT NOT NULL,
+            source_revision INTEGER,
+            source_fingerprint TEXT,
+            target_kind TEXT NOT NULL CHECK (target_kind IN ('knowledge', 'external')),
+            target_ref TEXT NOT NULL,
+            target_revision INTEGER,
+            target_fingerprint TEXT,
+            evidence TEXT NOT NULL,
+            source_finding_id TEXT,
+            evidence_basis_identity TEXT,
+            evidence_basis_revision INTEGER,
+            evidence_basis_fingerprint TEXT,
+            created_at TEXT NOT NULL,
+            decided_at TEXT,
+            CHECK (
+                (source_kind = 'knowledge'
+                    AND source_revision IS NOT NULL
+                    AND source_fingerprint IS NOT NULL)
+                OR (source_kind = 'external'
+                    AND source_revision IS NULL
+                    AND source_fingerprint IS NULL)
+            ),
+            CHECK (
+                (target_kind = 'knowledge'
+                    AND target_revision IS NOT NULL
+                    AND target_fingerprint IS NOT NULL)
+                OR (target_kind = 'external'
+                    AND target_revision IS NULL
+                    AND target_fingerprint IS NULL)
+            ),
+            CHECK (
+                (source_finding_id IS NULL
+                    AND evidence_basis_identity IS NULL
+                    AND evidence_basis_revision IS NULL
+                    AND evidence_basis_fingerprint IS NULL)
+                OR (source_finding_id IS NOT NULL
+                    AND evidence_basis_identity IS NOT NULL
+                    AND evidence_basis_revision IS NOT NULL
+                    AND evidence_basis_fingerprint IS NOT NULL)
+            ),
+            FOREIGN KEY (source_finding_id) REFERENCES review_findings(finding_id) ON DELETE RESTRICT
+        );
+        CREATE INDEX relation_maintenance_candidates_status_idx
+            ON relation_maintenance_candidates(status);
+        CREATE INDEX relation_maintenance_candidates_relation_idx
+            ON relation_maintenance_candidates(relation_identity, status);
+
+        UPDATE schema_meta
+            SET value = '5'
+            WHERE key = 'schema_version';
+
+        COMMIT;
+        """
+    )
+
+
+def validate_schema_v5(conn: sqlite3.Connection) -> None:
+    present = {
+        str(row["name"])
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' "
+            "AND name IN ("
+            "'review_findings', 'maintenance_candidates', "
+            "'conflict_candidates', 'conflict_candidate_members', "
+            "'relation_maintenance_candidates'"
+            ")"
+        ).fetchall()
+    }
+    missing = [name for name in _V5_REQUIRED_TABLES if name not in present]
+    if missing:
+        raise storage.StorageError(
+            "Review structured Authority is missing required v5 tables: "
+            + ", ".join(missing)
+        )
 
 
 def validate_schema_v4(conn: sqlite3.Connection) -> None:
@@ -246,6 +438,28 @@ def insert_source_review(
     )
 
 
+def get_source_finding(
+    conn: sqlite3.Connection,
+    finding_id: str,
+) -> SourceFindingRecord | None:
+    row = conn.execute(
+        """
+        SELECT finding_id, finding_kind, source_state,
+               target_identity, target_revision, target_fingerprint,
+               source_locator,
+               basis_source_id, basis_revision, basis_fingerprint,
+               observed_source_id, observed_revision, observed_fingerprint,
+               evidence, created_at
+        FROM review_findings
+        WHERE finding_id = ?
+        """,
+        (finding_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return SourceFindingRecord(**dict(row))
+
+
 def insert_source_stale_candidate(
     conn: sqlite3.Connection,
     *,
@@ -291,6 +505,203 @@ def insert_source_stale_candidate(
             storage.now_utc(),
         ),
     )
+
+
+def insert_conflict_candidate(
+    conn: sqlite3.Connection,
+    *,
+    candidate_id: str,
+    conflict: str,
+    evidence: str,
+    members: list[ConflictCandidateMemberRecord],
+) -> None:
+    timestamp = storage.now_utc()
+    conn.execute(
+        "INSERT INTO conflict_candidates("
+        "candidate_id, status, conflict, evidence, created_at"
+        ") VALUES (?, 'pending', ?, ?, ?)",
+        (candidate_id, conflict, evidence, timestamp),
+    )
+    for member in members:
+        conn.execute(
+            "INSERT INTO conflict_candidate_members("
+            "candidate_id, ordinal, member_kind, member_ref, basis_identity, "
+            "revision, fingerprint, canonical_locator"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                candidate_id,
+                member.ordinal,
+                member.member_kind,
+                member.member_ref,
+                member.basis_identity,
+                member.revision,
+                member.fingerprint,
+                member.canonical_locator,
+            ),
+        )
+
+
+def get_conflict_candidate(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> ConflictCandidateRecord | None:
+    row = conn.execute(
+        "SELECT candidate_id, status, conflict, evidence, created_at, decided_at "
+        "FROM conflict_candidates WHERE candidate_id = ?",
+        (candidate_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return ConflictCandidateRecord(**dict(row))
+
+
+def list_conflict_candidate_members(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> list[ConflictCandidateMemberRecord]:
+    rows = conn.execute(
+        "SELECT candidate_id, ordinal, member_kind, member_ref, basis_identity, "
+        "revision, fingerprint, canonical_locator "
+        "FROM conflict_candidate_members WHERE candidate_id = ? ORDER BY ordinal",
+        (candidate_id,),
+    ).fetchall()
+    return [ConflictCandidateMemberRecord(**dict(row)) for row in rows]
+
+
+def insert_relation_maintenance_candidate(
+    conn: sqlite3.Connection,
+    *,
+    candidate_id: str,
+    candidate_kind: str,
+    relation_identity: str,
+    relation_revision: int,
+    relation_fingerprint: str,
+    source_kind: str,
+    source_ref: str,
+    source_revision: int | None,
+    source_fingerprint: str | None,
+    target_kind: str,
+    target_ref: str,
+    target_revision: int | None,
+    target_fingerprint: str | None,
+    evidence: str,
+    source_finding_id: str | None = None,
+    evidence_basis_identity: str | None = None,
+    evidence_basis_revision: int | None = None,
+    evidence_basis_fingerprint: str | None = None,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO relation_maintenance_candidates(
+            candidate_id, candidate_kind, status,
+            relation_identity, relation_revision, relation_fingerprint,
+            source_kind, source_ref, source_revision, source_fingerprint,
+            target_kind, target_ref, target_revision, target_fingerprint,
+            evidence, source_finding_id, evidence_basis_identity,
+            evidence_basis_revision, evidence_basis_fingerprint, created_at
+        ) VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            candidate_id,
+            candidate_kind,
+            relation_identity,
+            relation_revision,
+            relation_fingerprint,
+            source_kind,
+            source_ref,
+            source_revision,
+            source_fingerprint,
+            target_kind,
+            target_ref,
+            target_revision,
+            target_fingerprint,
+            evidence,
+            source_finding_id,
+            evidence_basis_identity,
+            evidence_basis_revision,
+            evidence_basis_fingerprint,
+            storage.now_utc(),
+        ),
+    )
+
+
+def get_relation_maintenance_candidate(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> RelationMaintenanceCandidateRecord | None:
+    row = conn.execute(
+        """
+        SELECT candidate_id, candidate_kind, status,
+               relation_identity, relation_revision, relation_fingerprint,
+               source_kind, source_ref, source_revision, source_fingerprint,
+               target_kind, target_ref, target_revision, target_fingerprint,
+               evidence, source_finding_id, evidence_basis_identity,
+               evidence_basis_revision, evidence_basis_fingerprint,
+               created_at, decided_at
+        FROM relation_maintenance_candidates
+        WHERE candidate_id = ?
+        """,
+        (candidate_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return RelationMaintenanceCandidateRecord(**dict(row))
+
+
+def mark_relation_maintenance_candidate_stale(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> None:
+    changed = conn.execute(
+        "UPDATE relation_maintenance_candidates "
+        "SET status = 'stale', decided_at = ? "
+        "WHERE candidate_id = ? AND status = 'pending'",
+        (storage.now_utc(), candidate_id),
+    ).rowcount
+    if changed != 1:
+        raise storage.StorageError("relation maintenance candidate is not pending")
+
+
+def reject_relation_maintenance_candidate(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> None:
+    changed = conn.execute(
+        "UPDATE relation_maintenance_candidates "
+        "SET status = 'rejected', decided_at = ? "
+        "WHERE candidate_id = ? AND status IN ('pending', 'stale')",
+        (storage.now_utc(), candidate_id),
+    ).rowcount
+    if changed != 1:
+        raise storage.StorageError("relation maintenance candidate cannot be rejected")
+
+
+def mark_conflict_candidate_stale(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> None:
+    changed = conn.execute(
+        "UPDATE conflict_candidates "
+        "SET status = 'stale', decided_at = ? "
+        "WHERE candidate_id = ? AND status = 'pending'",
+        (storage.now_utc(), candidate_id),
+    ).rowcount
+    if changed != 1:
+        raise storage.StorageError("conflict candidate is not pending")
+
+
+def reject_conflict_candidate(
+    conn: sqlite3.Connection,
+    candidate_id: str,
+) -> None:
+    changed = conn.execute(
+        "UPDATE conflict_candidates "
+        "SET status = 'rejected', decided_at = ? "
+        "WHERE candidate_id = ? AND status IN ('pending', 'stale')",
+        (storage.now_utc(), candidate_id),
+    ).rowcount
+    if changed != 1:
+        raise storage.StorageError("conflict candidate cannot be rejected")
 
 
 def mark_candidate_stale(

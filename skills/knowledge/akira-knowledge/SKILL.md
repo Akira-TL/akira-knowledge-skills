@@ -15,7 +15,7 @@ disable-model-invocation: true
 - 明确要求长期保存、记下或加入知识库 → `knowledge-capture`；
 - 要把材料整理、提炼、综合成长期知识、为既有知识形成语义修改提案，或提出 / 检查 / 批准 / 拒绝正式机器关系候选 → `knowledge-curate`；
 - 要查找、筛选、全文搜索、按 stable identity 找回已有知识，或浏览当前 / 退役 / 已替代知识、材料 / Relation Graph Projection → `knowledge-retrieve`；
-- 要同步用户在 Obsidian 中的直接 edit / move / rename、执行已经批准的既有知识更新、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source 是否变化，或显式撤回已接受 Relation Record → `knowledge-maintain`。
+- 要同步用户在 Obsidian 中的直接 edit / move / rename、执行已经批准的既有知识更新、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、提出 / 检查 / 拒绝 semantic conflict candidate、执行 Relation maintenance Review，或显式撤回已接受 Relation Record → `knowledge-maintain`。
 
 一个请求跨越多个阶段时，Router 在 owning Skill 完成其有边界动作后重新判断下一意图。例如“把这段保存并整理成知识”先 Capture 得到材料记录，再进入 Curate；不能让 Capture 直接越权创建长期知识正文。
 
@@ -70,7 +70,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 7. 路由到 Maintenance
 
-用户要更新既有长期知识、已注册对象在 Obsidian 中发生 move / rename / direct edit 后准备继续写入、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source 是否变化，或明确撤回一个已接受 Relation Record 时，路由到 sibling `knowledge-maintain` Skill。普通正文更新仍先由 `knowledge-curate` 形成 proposal；Maintenance 负责同步 current revision、执行 stale-write 门禁并应用已批准 update。Knowledge Asset retire / supersede 都先形成绑定实际 revision 的 lifecycle proposal；Source Review 则绑定实际 Source basis / observed identity、revision、fingerprint 与 evidence，只在可验证变化时形成待治理 stale candidate，不直接改 Authority。relation revoke 继续使用 expected revision 保护。
+用户要更新既有长期知识、已注册对象在 Obsidian 中发生 move / rename / direct edit 后准备继续写入、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、治理 semantic conflict / Relation maintenance candidate，或明确撤回一个已接受 Relation Record 时，路由到 sibling `knowledge-maintain` Skill。普通正文更新仍先由 `knowledge-curate` 形成 proposal；Maintenance 负责同步 current revision、执行 stale-write 门禁并应用已批准 update。Knowledge Asset retire / supersede 都先形成绑定实际 revision 的 lifecycle proposal；Source Review、semantic conflict 与 Relation maintenance 则只形成绑定实际 identities / revisions / fingerprints / evidence 的待治理 Candidate，不直接改 Authority。relation revoke 继续使用 expected revision 保护；新的 relation 语义继续走 Relation Candidate → approval。
 
 ## 8. Obsidian 执行边界
 
@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-`0.1.x` 基础 Knowledge Loop、`0.2.x` Retrieval + Views 与 `0.3.x` Knowledge Network 均已完成对应独立门禁。`0.4.x` Long-term Maintenance 已进入实现：当前已完成 Knowledge Asset 明确退役 / supersede、真实 `retired` / `superseded` Retrieval Scope、对应 Bases 视图，以及可验证 Source Review → stale maintenance candidate；跨知识 conflict / Relation maintenance Review、知识网络健康诊断与 batch maintenance 仍未完成，不得提前描述为现有能力。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop、`0.2.x` Retrieval + Views 与 `0.3.x` Knowledge Network 均已完成对应独立门禁。`0.4.x` Long-term Maintenance 已进入实现：当前已完成 Knowledge Asset 明确退役 / supersede、真实 `retired` / `superseded` Retrieval Scope、对应 Bases 视图、可验证 Source Review → stale maintenance candidate，以及 semantic conflict / Relation maintenance Review；知识网络健康诊断与 batch maintenance 仍未完成，不得提前描述为现有能力。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。

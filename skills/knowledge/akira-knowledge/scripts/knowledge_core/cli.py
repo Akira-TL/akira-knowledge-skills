@@ -18,16 +18,22 @@ from knowledge_core.service import (
     create_retire_proposal,
     create_supersede_proposal,
     create_relation_candidate,
+    inspect_conflict_candidate,
     inspect_relation_candidate,
+    inspect_relation_maintenance_candidate,
     inspect_review_candidate,
     inspect_vault,
     plan_source_review,
+    propose_conflict,
+    propose_relation_maintenance,
     rebuild_dynamic_views,
     rebuild_relation_graph,
     rebuild_full_text_projection,
     register_notes,
     reject_curate_proposal,
+    reject_conflict_candidate,
     reject_relation_candidate,
+    reject_relation_maintenance_candidate,
     reject_review_candidate,
     retrieve_exact,
     retrieve_filter,
@@ -250,6 +256,63 @@ def build_parser() -> argparse.ArgumentParser:
     supersede_apply_parser.add_argument("--proposal-id", required=True)
     supersede_apply_parser.add_argument("--confirmed-approval", action="store_true")
 
+    conflict_parser = subparsers.add_parser(
+        "maintain-propose-conflict",
+        help="Create a basis-bound semantic conflict candidate without modifying Authority",
+    )
+    conflict_parser.add_argument("--vault", required=True, type=Path)
+    conflict_parser.add_argument("--knowledge-id", action="append", default=[])
+    conflict_parser.add_argument("--source-finding-id", action="append", default=[])
+    conflict_parser.add_argument("--relation-id", action="append", default=[])
+    conflict_parser.add_argument("--conflict", required=True)
+    conflict_parser.add_argument("--evidence", required=True)
+
+    conflict_inspect_parser = subparsers.add_parser(
+        "maintain-inspect-conflict",
+        help="Revalidate and inspect one semantic conflict candidate",
+    )
+    conflict_inspect_parser.add_argument("--vault", required=True, type=Path)
+    conflict_inspect_parser.add_argument("--candidate-id", required=True)
+
+    conflict_reject_parser = subparsers.add_parser(
+        "maintain-reject-conflict",
+        help="Reject a pending or stale semantic conflict candidate",
+    )
+    conflict_reject_parser.add_argument("--vault", required=True, type=Path)
+    conflict_reject_parser.add_argument("--candidate-id", required=True)
+    conflict_reject_parser.add_argument("--confirmed-rejection", action="store_true")
+
+    relation_maintenance_parser = subparsers.add_parser(
+        "maintain-propose-relation-maintenance",
+        help="Create a basis-bound stale/conflict candidate for one active Relation Record",
+    )
+    relation_maintenance_parser.add_argument("--vault", required=True, type=Path)
+    relation_maintenance_parser.add_argument("--relation-id", required=True)
+    relation_maintenance_parser.add_argument(
+        "--kind",
+        required=True,
+        choices=("relation_stale", "relation_conflict"),
+    )
+    relation_maintenance_parser.add_argument("--source-finding-id")
+    relation_maintenance_parser.add_argument("--evidence", required=True)
+
+    relation_maintenance_inspect_parser = subparsers.add_parser(
+        "maintain-inspect-relation-maintenance",
+        help="Revalidate one Relation maintenance candidate",
+    )
+    relation_maintenance_inspect_parser.add_argument("--vault", required=True, type=Path)
+    relation_maintenance_inspect_parser.add_argument("--candidate-id", required=True)
+
+    relation_maintenance_reject_parser = subparsers.add_parser(
+        "maintain-reject-relation-maintenance",
+        help="Reject a pending or stale Relation maintenance candidate",
+    )
+    relation_maintenance_reject_parser.add_argument("--vault", required=True, type=Path)
+    relation_maintenance_reject_parser.add_argument("--candidate-id", required=True)
+    relation_maintenance_reject_parser.add_argument(
+        "--confirmed-rejection", action="store_true"
+    )
+
     review_plan_parser = subparsers.add_parser(
         "maintain-review-plan",
         help="List provenance Sources that should be verified for one current Knowledge Asset",
@@ -467,6 +530,45 @@ def main(argv: list[str] | None = None) -> int:
                 args.vault,
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,
+            )
+        elif args.command == "maintain-propose-conflict":
+            payload = propose_conflict(
+                args.vault,
+                knowledge_ids=args.knowledge_id,
+                source_finding_ids=args.source_finding_id,
+                relation_ids=args.relation_id,
+                conflict=args.conflict,
+                evidence=args.evidence,
+            )
+        elif args.command == "maintain-inspect-conflict":
+            payload = inspect_conflict_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+            )
+        elif args.command == "maintain-reject-conflict":
+            payload = reject_conflict_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+                confirmed_rejection=args.confirmed_rejection,
+            )
+        elif args.command == "maintain-propose-relation-maintenance":
+            payload = propose_relation_maintenance(
+                args.vault,
+                relation_identity=args.relation_id,
+                candidate_kind=args.kind,
+                source_finding_id=args.source_finding_id,
+                evidence=args.evidence,
+            )
+        elif args.command == "maintain-inspect-relation-maintenance":
+            payload = inspect_relation_maintenance_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+            )
+        elif args.command == "maintain-reject-relation-maintenance":
+            payload = reject_relation_maintenance_candidate(
+                args.vault,
+                candidate_id=args.candidate_id,
+                confirmed_rejection=args.confirmed_rejection,
             )
         elif args.command == "maintain-review-plan":
             payload = plan_source_review(
