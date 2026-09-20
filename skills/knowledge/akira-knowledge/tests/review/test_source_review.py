@@ -315,6 +315,38 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
         self.assertEqual(1, candidate_count)
         self.assertEqual(3, object_count)
 
+    def test_unknown_source_without_stable_basis_does_not_require_fabricated_values(self) -> None:
+        planned = json.loads(
+            self.run_cli(
+                "maintain-review-plan",
+                "--vault", str(self.vault),
+                "--identity", self.asset_identity,
+            ).stdout
+        )
+        self.assertIsNone(planned["sources"][0]["last_verified"])
+
+        reviewed = json.loads(
+            self.run_cli(
+                "maintain-review-source",
+                "--vault", str(self.vault),
+                "--identity", self.asset_identity,
+                "--source", "https://example.org/source-review",
+                "--unknown",
+                "--evidence", "Source is unreachable and no stable comparison basis exists yet.",
+            ).stdout
+        )
+
+        self.assertEqual("unknown", reviewed["source_state"])
+        self.assertIsNone(reviewed["basis"])
+        self.assertIsNone(reviewed["observed"])
+        self.assertIsNone(reviewed["candidate"])
+        with sqlite3.connect(self.database) as conn:
+            finding = conn.execute(
+                "SELECT basis_source_id, basis_revision, basis_fingerprint, source_state "
+                "FROM review_findings"
+            ).fetchone()
+        self.assertEqual(("", "", "", "unknown"), finding)
+
     def test_unknown_source_check_records_finding_without_stale_candidate(self) -> None:
         reviewed = json.loads(
             self.review_source(

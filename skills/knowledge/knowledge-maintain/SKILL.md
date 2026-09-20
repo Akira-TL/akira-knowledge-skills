@@ -152,7 +152,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-review-
   --evidence <verified-evidence>
 ```
 
-如果当前无法确认 Source revision / fingerprint，使用 `--unknown`，并省略 observed 三项。此时只记录 `unknown` Review finding，不生成 stale candidate。
+如果当前无法确认 Source revision / fingerprint，使用 `--unknown`，并省略 observed 三项。若已有 `last_verified` 或其他可靠历史 basis，可以同时保留完整 basis 三项；若恰恰因为没有稳定比较依据而无法确认，则 basis 三项也应全部省略，外部结果明确返回 `basis: null`，不得编造 revision / fingerprint。此时只记录 `unknown` Review finding，不生成 stale candidate。
 
 后端要求该 Source locator 确实位于目标 Knowledge Asset 的 material provenance 链；observed Source identity 与 basis identity 不一致时 fail closed，不把重定向到另一 owner 的内容当作原 Source 的新 revision。
 

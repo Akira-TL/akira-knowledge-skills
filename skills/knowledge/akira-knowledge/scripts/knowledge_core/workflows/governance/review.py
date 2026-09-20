@@ -80,9 +80,9 @@ def review_source(
     *,
     identity: str,
     source_locator: str,
-    basis_source_id: str,
-    basis_revision: str,
-    basis_fingerprint: str,
+    basis_source_id: str | None,
+    basis_revision: str | None,
+    basis_fingerprint: str | None,
     evidence: str,
     unknown: bool,
     observed_source_id: str | None,
@@ -92,12 +92,22 @@ def review_source(
     root = _vault_root(vault)
     if not source_locator.strip():
         raise BootstrapError("Source review requires a non-empty source locator")
-    if not basis_source_id.strip():
-        raise BootstrapError("Source review requires a non-empty basis source identity")
-    if not basis_revision.strip():
-        raise BootstrapError("Source review requires a non-empty basis revision")
-    if not basis_fingerprint.strip():
-        raise BootstrapError("Source review requires a non-empty basis fingerprint")
+    basis = (basis_source_id, basis_revision, basis_fingerprint)
+    if unknown:
+        provided_basis = [item is not None for item in basis]
+        if any(provided_basis) and not all(provided_basis):
+            raise BootstrapError(
+                "Unknown Source review basis must be either complete or entirely omitted"
+            )
+        if all(provided_basis) and any(not str(item).strip() for item in basis):
+            raise BootstrapError(
+                "Unknown Source review basis values must not be empty"
+            )
+    else:
+        if any(item is None or not item.strip() for item in basis):
+            raise BootstrapError(
+                "Confirmed Source review requires basis source identity, revision, and fingerprint"
+            )
     if not evidence.strip():
         raise BootstrapError("Source review requires concrete evidence")
     observed = (observed_source_id, observed_revision, observed_fingerprint)
@@ -143,6 +153,9 @@ def review_source(
             assert observed_source_id is not None
             assert observed_revision is not None
             assert observed_fingerprint is not None
+            assert basis_source_id is not None
+            assert basis_revision is not None
+            assert basis_fingerprint is not None
             if observed_source_id != basis_source_id:
                 raise BootstrapError(
                     "Source identity changed during review; "
@@ -168,9 +181,9 @@ def review_source(
                 target_revision=target.revision,
                 target_fingerprint=target.fingerprint,
                 source_locator=source_locator,
-                basis_source_id=basis_source_id,
-                basis_revision=basis_revision,
-                basis_fingerprint=basis_fingerprint,
+                basis_source_id=basis_source_id or "",
+                basis_revision=basis_revision or "",
+                basis_fingerprint=basis_fingerprint or "",
                 observed_source_id=observed_source_id,
                 observed_revision=observed_revision,
                 observed_fingerprint=observed_fingerprint,
@@ -217,11 +230,15 @@ def review_source(
         "governance_path": (
             "knowledge-curate update proposal or knowledge-maintain lifecycle proposal"
         ),
-        "basis": {
-            "source_id": basis_source_id,
-            "revision": basis_revision,
-            "fingerprint": basis_fingerprint,
-        },
+        "basis": (
+            None
+            if basis_source_id is None
+            else {
+                "source_id": basis_source_id,
+                "revision": basis_revision,
+                "fingerprint": basis_fingerprint,
+            }
+        ),
         "observed": (
             None
             if unknown
