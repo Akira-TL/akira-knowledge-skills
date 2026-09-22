@@ -390,6 +390,24 @@ class NetworkHealthBlackBoxTests(unittest.TestCase):
             ).fetchall()
         self.assertEqual([], missing)
 
+    def test_duplicate_stable_identity_fails_closed_without_mutation(self) -> None:
+        source = self.knowledge / "A.md"
+        duplicate = self.knowledge / "A-copy.md"
+        original = source.read_bytes()
+        duplicate.write_bytes(original)
+        before_revisions = self.revision_snapshot()
+
+        failed = self.run_cli(
+            "maintain-health-scan",
+            "--vault", str(self.vault),
+            expect=2,
+        )
+
+        self.assertIn("duplicate stable identity", failed.stderr.lower())
+        self.assertEqual(before_revisions, self.revision_snapshot())
+        self.assertEqual(original, source.read_bytes())
+        self.assertEqual(original, duplicate.read_bytes())
+
     def test_ambiguous_wikilink_target_fails_closed_instead_of_reporting_unresolved(self) -> None:
         (self.knowledge / "X").mkdir()
         (self.knowledge / "Y").mkdir()
