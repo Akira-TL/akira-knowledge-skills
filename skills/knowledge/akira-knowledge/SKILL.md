@@ -70,7 +70,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 7. 路由到 Maintenance
 
-用户要更新既有长期知识、已注册对象在 Obsidian 中发生 move / rename / direct edit 后准备继续写入、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、治理 semantic conflict / Relation maintenance candidate，或明确撤回一个已接受 Relation Record 时，路由到 sibling `knowledge-maintain` Skill。普通正文更新仍先由 `knowledge-curate` 形成 proposal；Maintenance 负责同步 current revision、执行 stale-write 门禁并应用已批准 update。Knowledge Asset retire / supersede 都先形成绑定实际 revision 的 lifecycle proposal；Source Review、semantic conflict 与 Relation maintenance 则只形成绑定实际 identities / revisions / fingerprints / evidence 的待治理 Candidate，不直接改 Authority。relation revoke 继续使用 expected revision 保护；新的 relation 语义继续走 Relation Candidate → approval。
+用户要更新既有长期知识、已注册对象在 Obsidian 中发生 move / rename / direct edit 后准备继续写入、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、治理 semantic conflict / Relation maintenance candidate、检查 Knowledge Network orphan / unresolved / dead-end，修复人类 Authority 中的 wikilink / user Property，或明确撤回一个已接受 Relation Record 时，路由到 sibling `knowledge-maintain` Skill。普通正文更新仍先由 `knowledge-curate` 形成 proposal；Maintenance 负责同步 current revision、执行 stale-write 门禁并应用已批准 update。Knowledge Asset retire / supersede 都先形成绑定实际 revision 的 lifecycle proposal；Source Review、semantic conflict 与 Relation maintenance 则只形成绑定实际 identities / revisions / fingerprints / evidence 的待治理 Candidate，不直接改 Authority。Network health scan 保持只读；wikilink / user Property 修改先形成独立 revision-bound Authority edit proposal，只有明确批准后才写入。relation revoke 继续使用 expected revision 保护；新的 relation 语义继续走 Relation Candidate → approval。
 
 ## 8. Obsidian 执行边界
 
@@ -82,4 +82,4 @@ Akira Knowledge 决定知识语义与工作流，上游 Obsidian Skill 负责 Ob
 
 ## 9. 当前实现边界
 
-`0.1.x` 基础 Knowledge Loop、`0.2.x` Retrieval + Views 与 `0.3.x` Knowledge Network 均已完成对应独立门禁。`0.4.x` Long-term Maintenance 已进入实现：当前已完成 Knowledge Asset 明确退役 / supersede、真实 `retired` / `superseded` Retrieval Scope、对应 Bases 视图、可验证 Source Review → stale maintenance candidate，以及 semantic conflict / Relation maintenance Review；知识网络健康诊断与 batch maintenance 仍未完成，不得提前描述为现有能力。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。
+`0.1.x` 基础 Knowledge Loop、`0.2.x` Retrieval + Views 与 `0.3.x` Knowledge Network 均已完成对应独立门禁。`0.4.x` Long-term Maintenance 已进入实现：当前已完成 Knowledge Asset 明确退役 / supersede、真实 `retired` / `superseded` Retrieval Scope、对应 Bases 视图、可验证 Source Review → stale maintenance candidate、semantic conflict / Relation maintenance Review、只读 Knowledge Network health diagnostics，以及 revision-safe wikilink / user Property Authority edit；batch maintenance 仍未完成，不得提前描述为现有能力。通过发布就绪门禁仍不等于已经完成 GitHub tag / release 或远端安装发布。

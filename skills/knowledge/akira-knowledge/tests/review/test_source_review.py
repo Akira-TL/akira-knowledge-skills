@@ -412,13 +412,14 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
         )
         self.assertEqual(0, candidate_count)
 
-    def test_v3_database_migrates_review_authority_to_v4_without_markdown_rewrite(self) -> None:
+    def test_v3_database_migrates_review_authority_to_current_schema_without_markdown_rewrite(self) -> None:
         before_revision = self.asset_revision()
         before_markdown = {
             path.relative_to(self.vault).as_posix(): path.read_bytes()
             for path in sorted(self.vault.rglob("*.md"))
         }
         with sqlite3.connect(self.database) as conn:
+            conn.execute("DROP TABLE authority_edit_proposals")
             conn.execute("DROP TABLE relation_maintenance_candidates")
             conn.execute("DROP TABLE conflict_candidate_members")
             conn.execute("DROP TABLE conflict_candidates")
@@ -455,7 +456,7 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
                     "AND name IN ('review_findings', 'maintenance_candidates')"
                 ).fetchall()
             }
-        self.assertEqual("5", schema_version)
+        self.assertEqual("6", schema_version)
         self.assertEqual(
             {"review_findings", "maintenance_candidates"},
             tables,
@@ -466,7 +467,7 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
             schema_version = conn.execute(
                 "SELECT value FROM schema_meta WHERE key = 'schema_version'"
             ).fetchone()[0]
-            self.assertEqual("5", schema_version)
+            self.assertEqual("6", schema_version)
             conn.execute("DROP TABLE maintenance_candidates")
             conn.commit()
 

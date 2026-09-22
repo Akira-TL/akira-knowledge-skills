@@ -1,11 +1,11 @@
 ---
 name: knowledge-maintain
-description: 执行 revision-safe 的显式知识更新、确定性状态同步、Relation Record 显式撤回，以及 0.4.x 已实现的 Knowledge Asset lifecycle、Source Review、conflict candidate 与 Relation maintenance Review；在写入前阻止陈旧 revision 覆盖较新的 Authority。
+description: 执行 revision-safe 的显式知识更新、确定性状态同步、Knowledge Network 健康诊断、人类 Authority 链接/属性维护、Relation Record 显式撤回，以及 0.4.x lifecycle / Review 治理；在写入前阻止陈旧 revision 覆盖较新的 Authority。
 ---
 
 # Knowledge Maintain
 
-`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate 与 Relation maintenance Review。批量维护与知识网络健康检查仍未实现，不得提前描述为现有能力。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate、Relation maintenance Review、只读 Knowledge Network 健康诊断，以及受治理的人类 wikilink / user Property 修改。批量维护仍未实现，不得提前描述为现有能力。
 
 ## 1. 同步当前对象状态
 
@@ -235,7 +235,59 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-inspect
 
 Relation maintenance Candidate 没有 apply 命令，也不能原地改变既有 source / type / target triple。真正需要撤回时继续使用 `relation-revoke --expected-revision`；需要新的 relation 语义时继续使用 `relation-propose → relation-approve`。用户也可以通过 `maintain-reject-relation-maintenance --confirmed-rejection` 拒绝候选而不修改 Relation Authority。
 
-## 9. Relation Record 显式撤回
+## 9. Knowledge Network 健康诊断与链接 / 属性维护
+
+需要检查当前 Knowledge-managed 网络时，使用只读入口：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-health-scan \
+  --vault <vault>
+```
+
+诊断只观察当前 Knowledge Asset 的可解析普通 wikilink 与 active Relation Record，返回：
+
+- `orphan`：没有可解析 incoming / outgoing navigation 或 active relation 的当前 Knowledge Asset；
+- `unresolved`：普通本地 Knowledge wikilink 无法解析到唯一 canonical target，并返回 source identity / locator 与原始 wikilink evidence；
+- `dead_end`：能被其他当前对象到达，但自身没有可解析向外 navigation / active relation 的当前 Knowledge Asset。
+
+诊断不创建 Relation Record、不加 tag、不改 lifecycle，也不持久化第二份网络 Authority；重复扫描不得推进 Knowledge / Relation revision。若一个本地引用存在多个 canonical candidate，必须 fail closed，而不是把它记成普通 unresolved。
+
+需要修复**人类 Authority**中的 wikilink 或 user Property 时，先形成 revision-bound proposal。wikilink 示例：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-propose-authority-edit \
+  --vault <vault> \
+  --identity <knowledge-asset-id> \
+  --base-revision <actually-read-revision> \
+  --replace-wikilink <old-target> <new-target> \
+  --reason <reason>
+```
+
+user Property 示例：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-propose-authority-edit \
+  --vault <vault> \
+  --identity <knowledge-asset-id> \
+  --base-revision <actually-read-revision> \
+  --set-property <key> <value> \
+  --reason <reason>
+```
+
+proposal 阶段只保存完整拟议 Authority 文本，不写 Markdown。它必须保留未知 frontmatter、无关正文、comments 与用户格式；Akira Knowledge-owned Property 不允许通过该人类 Authority edit 路径修改。
+
+用户明确批准后执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-authority-edit \
+  --vault <vault> \
+  --proposal-id <proposal-id> \
+  --confirmed-approval
+```
+
+执行前重新同步目标；只要 current revision 不再等于 proposal base revision，就按 stale fail closed，不覆盖用户期间产生的较新 edit / move。成功后保持 stable identity，推进 Knowledge revision，并在 revision ledger 记录 `authority_edit_applied`。该路径只修改已批准的人类 Authority，不自动创建 typed relation。
+
+## 10. Relation Record 显式撤回
 
 用户明确要求撤回一个当前正式关系时，调用方必须先读取该 Relation Record 的当前 revision，并在确认后执行：
 
@@ -263,7 +315,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 撤回是实际 Relation Authority mutation；Relation stale / conflict Review 只产生待治理 Candidate。两者边界保持分离，Review 不得绕过 expected-revision revoke 或 Relation Candidate / approval 合同。批量 Review 继续由后续 `0.4.x` ticket 扩展。
 
-## 10. 停止边界
+## 11. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 
@@ -275,6 +327,9 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 - Knowledge-owned 状态镜像与结构化 Authority 漂移；
 - Source 不属于目标 Knowledge provenance、Source identity 无法保持一致，或 Source 当前状态无法被可靠比较；
 - Review Candidate 的目标 basis 已变化；
+- 本地 Knowledge wikilink 无法唯一解析；
+- human Authority edit proposal 的 base revision 已过期；
+- 试图通过 human Authority edit 修改 Knowledge-owned Property；
 - 结构化 Authority store 不可读取。
 
 `0.1.x` 不引入多 Agent 锁、claim、并发仲裁或自动语义 merge；这些也不属于 Akira Knowledge 当前产品职责。

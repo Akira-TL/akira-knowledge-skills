@@ -8,6 +8,7 @@ import sys
 
 from knowledge_core.service import (
     BootstrapError,
+    apply_authority_edit,
     apply_retire_proposal,
     apply_supersede_proposal,
     apply_update_proposal,
@@ -24,6 +25,7 @@ from knowledge_core.service import (
     inspect_review_candidate,
     inspect_vault,
     plan_source_review,
+    propose_authority_edit,
     propose_conflict,
     propose_relation_maintenance,
     rebuild_dynamic_views,
@@ -41,6 +43,7 @@ from knowledge_core.service import (
     retrieve_task_package,
     review_source,
     revoke_relation,
+    scan_network_health,
     synchronize_object,
 )
 from knowledge_core.storage import StorageError
@@ -206,6 +209,46 @@ def build_parser() -> argparse.ArgumentParser:
         "relation-graph-rebuild", help="Rebuild active Relation Record Graph Projection"
     )
     graph_parser.add_argument("--vault", required=True, type=Path)
+
+    health_parser = subparsers.add_parser(
+        "maintain-health-scan",
+        help="Read-only diagnostics for orphan, unresolved, and dead-end Knowledge network states",
+    )
+    health_parser.add_argument("--vault", required=True, type=Path)
+
+    authority_edit_propose_parser = subparsers.add_parser(
+        "maintain-propose-authority-edit",
+        help="Create a revision-bound proposal for one human Authority wikilink or Property edit",
+    )
+    authority_edit_propose_parser.add_argument("--vault", required=True, type=Path)
+    authority_edit_propose_parser.add_argument("--identity", required=True)
+    authority_edit_propose_parser.add_argument(
+        "--base-revision", required=True, type=int
+    )
+    authority_edit_group = authority_edit_propose_parser.add_mutually_exclusive_group(
+        required=True
+    )
+    authority_edit_group.add_argument(
+        "--replace-wikilink",
+        nargs=2,
+        metavar=("OLD_TARGET", "NEW_TARGET"),
+    )
+    authority_edit_group.add_argument(
+        "--set-property",
+        nargs=2,
+        metavar=("KEY", "VALUE"),
+    )
+    authority_edit_propose_parser.add_argument("--reason", required=True)
+
+    authority_edit_apply_parser = subparsers.add_parser(
+        "maintain-apply-authority-edit",
+        help="Apply an explicitly approved revision-bound human Authority edit",
+    )
+    authority_edit_apply_parser.add_argument("--vault", required=True, type=Path)
+    authority_edit_apply_parser.add_argument("--proposal-id", required=True)
+    authority_edit_apply_parser.add_argument(
+        "--confirmed-approval", action="store_true"
+    )
 
     sync_parser = subparsers.add_parser(
         "maintain-sync", help="Synchronize current locator/fingerprint into the revision ledger"
@@ -495,6 +538,31 @@ def main(argv: list[str] | None = None) -> int:
             payload = rebuild_dynamic_views(args.vault)
         elif args.command == "relation-graph-rebuild":
             payload = rebuild_relation_graph(args.vault)
+        elif args.command == "maintain-health-scan":
+            payload = scan_network_health(args.vault)
+        elif args.command == "maintain-propose-authority-edit":
+            payload = propose_authority_edit(
+                args.vault,
+                identity=args.identity,
+                expected_base_revision=args.base_revision,
+                reason=args.reason,
+                wikilink_replacement=(
+                    None
+                    if args.replace_wikilink is None
+                    else tuple(args.replace_wikilink)
+                ),
+                property_update=(
+                    None
+                    if args.set_property is None
+                    else tuple(args.set_property)
+                ),
+            )
+        elif args.command == "maintain-apply-authority-edit":
+            payload = apply_authority_edit(
+                args.vault,
+                proposal_id=args.proposal_id,
+                confirmed_approval=args.confirmed_approval,
+            )
         elif args.command == "maintain-sync":
             payload = synchronize_object(args.vault, identity=args.identity)
         elif args.command == "maintain-apply-update":

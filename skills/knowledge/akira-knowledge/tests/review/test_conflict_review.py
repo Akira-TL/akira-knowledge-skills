@@ -281,7 +281,7 @@ class ConflictReviewBlackBoxTests(unittest.TestCase):
         self.assertEqual("stale", inspected["status"])
         self.assertEqual(2, inspected["current_source"]["revision"])
 
-    def test_v4_review_authority_migrates_to_v5_without_losing_source_review_records(self) -> None:
+    def test_v4_review_authority_migrates_to_current_schema_without_losing_source_review_records(self) -> None:
         finding_id, _ = self.create_source_finding()
         with sqlite3.connect(self.database) as conn:
             finding_before = conn.execute(
@@ -294,6 +294,7 @@ class ConflictReviewBlackBoxTests(unittest.TestCase):
                 "FROM maintenance_candidates WHERE source_finding_id = ?",
                 (finding_id,),
             ).fetchone()
+            conn.execute("DROP TABLE authority_edit_proposals")
             conn.execute("DROP TABLE relation_maintenance_candidates")
             conn.execute("DROP TABLE conflict_candidate_members")
             conn.execute("DROP TABLE conflict_candidates")
@@ -331,7 +332,7 @@ class ConflictReviewBlackBoxTests(unittest.TestCase):
                     "'relation_maintenance_candidates')"
                 ).fetchall()
             }
-        self.assertEqual("5", schema_version)
+        self.assertEqual("6", schema_version)
         self.assertEqual(finding_before, finding_after)
         self.assertEqual(source_candidate_before, source_candidate_after)
         self.assertEqual(
@@ -346,7 +347,7 @@ class ConflictReviewBlackBoxTests(unittest.TestCase):
     def test_v5_missing_review_governance_table_fails_closed(self) -> None:
         with sqlite3.connect(self.database) as conn:
             self.assertEqual(
-                "5",
+                "6",
                 conn.execute(
                     "SELECT value FROM schema_meta WHERE key='schema_version'"
                 ).fetchone()[0],

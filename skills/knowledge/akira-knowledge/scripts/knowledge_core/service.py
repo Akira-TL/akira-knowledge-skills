@@ -17,6 +17,10 @@ from knowledge_core.workflows.maintain import (
     revoke_relation,
     synchronize_object,
 )
+from knowledge_core.workflows.governance.authority_edits import (
+    apply_authority_edit,
+    propose_authority_edit,
+)
 from knowledge_core.workflows.governance.relation_candidates import (
     approve_relation_candidate,
     create_relation_candidate,
@@ -38,11 +42,13 @@ from knowledge_core.workflows.governance.review import (
     reject_review_candidate,
     review_source,
 )
+from knowledge_core.workflows.diagnostics.network_health import scan_network_health
 from knowledge_core.workflows.projections.relation_graph import rebuild_relation_graph
 from knowledge_core.workflows.projections.views import rebuild_dynamic_views
 
 __all__ = [
     "BootstrapError",
+    "apply_authority_edit",
     "apply_retire_proposal",
     "apply_supersede_proposal",
     "apply_update_proposal",
@@ -59,6 +65,7 @@ __all__ = [
     "inspect_review_candidate",
     "inspect_vault",
     "plan_source_review",
+    "propose_authority_edit",
     "propose_conflict",
     "propose_relation_maintenance",
     "rebuild_full_text_projection",
@@ -75,6 +82,7 @@ __all__ = [
     "retrieve_task_package",
     "review_source",
     "revoke_relation",
+    "scan_network_health",
     "rebuild_dynamic_views",
     "synchronize_object",
 ]

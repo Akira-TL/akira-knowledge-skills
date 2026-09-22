@@ -142,6 +142,7 @@ class SupersedeLifecycleBlackBoxTests(unittest.TestCase):
                 "FROM lifecycle_proposals ORDER BY proposal_id"
             ).fetchall()
 
+            conn.execute("DROP TABLE authority_edit_proposals")
             conn.execute("DROP TABLE relation_maintenance_candidates")
             conn.execute("DROP TABLE conflict_candidate_members")
             conn.execute("DROP TABLE conflict_candidates")
@@ -235,7 +236,7 @@ class SupersedeLifecycleBlackBoxTests(unittest.TestCase):
                 for row in conn.execute("PRAGMA table_info(lifecycle_proposals)").fetchall()
             }
 
-        self.assertEqual("5", schema_version)
+        self.assertEqual("6", schema_version)
         self.assertEqual(("retired", None), lifecycle)
         self.assertEqual(
             [(2, "retired", "retired", "Retired before v3 migration.", None)],
