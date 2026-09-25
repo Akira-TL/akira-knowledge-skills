@@ -12,7 +12,7 @@ SYSTEM_DIR = ".akira-knowledge"
 CONFIG_NAME = "config.json"
 DB_NAME = "knowledge.sqlite"
 SCHEMA_VERSION = 1
-DB_SCHEMA_VERSION = 6
+DB_SCHEMA_VERSION = 7
 
 
 class StorageError(RuntimeError):
@@ -140,10 +140,10 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             "SELECT value FROM schema_meta WHERE key = 'schema_version'"
         ).fetchone()
         existing_version = None if existing is None else str(existing["value"])
-        if existing_version not in {None, "1", "2", "3", "4", "5", str(DB_SCHEMA_VERSION)}:
+        if existing_version not in {None, "1", "2", "3", "4", "5", "6", str(DB_SCHEMA_VERSION)}:
             raise StorageError(
                 f"unsupported SQLite schema version {existing_version!r}; "
-                f"expected 1, 2, 3, 4, 5, or {DB_SCHEMA_VERSION}"
+                f"expected 1, 2, 3, 4, 5, 6, or {DB_SCHEMA_VERSION}"
             )
         if existing_version == "2":
             from knowledge_core.persistence import lifecycle as lifecycle_store
@@ -350,10 +350,10 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         "SELECT value FROM schema_meta WHERE key = 'schema_version'"
     ).fetchone()
     current_db_version = None if current is None else str(current["value"])
-    if current_db_version not in {None, "1", "3", "4", "5", str(DB_SCHEMA_VERSION)}:
+    if current_db_version not in {None, "1", "3", "4", "5", "6", str(DB_SCHEMA_VERSION)}:
         raise StorageError(
             f"unsupported SQLite schema version {current_db_version!r}; "
-            f"expected 1, 3, 4, 5, or {DB_SCHEMA_VERSION}"
+            f"expected 1, 3, 4, 5, 6, or {DB_SCHEMA_VERSION}"
         )
 
     timestamp = now_utc()
@@ -373,23 +373,31 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
     from knowledge_core.persistence import authority_edits as authority_edit_store
+    from knowledge_core.persistence import batch as batch_store
     from knowledge_core.persistence import review as review_store
 
     if current_db_version == str(DB_SCHEMA_VERSION):
         review_store.validate_schema_v5(conn)
         authority_edit_store.validate_schema_v6(conn)
+        batch_store.validate_schema_v7(conn)
         return
 
-    if current_db_version == "5":
+    if current_db_version == "6":
         review_store.validate_schema_v5(conn)
+        authority_edit_store.validate_schema_v6(conn)
+    elif current_db_version == "5":
+        review_store.validate_schema_v5(conn)
+        authority_edit_store.migrate_schema_v5_to_v6(conn)
     elif current_db_version == "4":
         review_store.validate_schema_v4(conn)
         review_store.migrate_schema_v4_to_v5(conn)
+        authority_edit_store.migrate_schema_v5_to_v6(conn)
     else:
         review_store.migrate_schema_to_v4(conn)
         review_store.migrate_schema_v4_to_v5(conn)
+        authority_edit_store.migrate_schema_v5_to_v6(conn)
 
-    authority_edit_store.migrate_schema_v5_to_v6(conn)
+    batch_store.migrate_schema_v6_to_v7(conn)
 
 
 def get_by_identity(conn: sqlite3.Connection, identity: str) -> ObjectRecord | None:

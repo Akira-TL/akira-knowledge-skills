@@ -12,13 +12,16 @@ from knowledge_core.service import (
     apply_retire_proposal,
     apply_supersede_proposal,
     apply_update_proposal,
+    approve_batch,
     approve_curate_proposal,
     approve_relation_candidate,
     capture_material,
+    create_batch,
     create_curate_proposal,
     create_retire_proposal,
     create_supersede_proposal,
     create_relation_candidate,
+    execute_batch,
     inspect_conflict_candidate,
     inspect_relation_candidate,
     inspect_relation_maintenance_candidate,
@@ -249,6 +252,34 @@ def build_parser() -> argparse.ArgumentParser:
     authority_edit_apply_parser.add_argument(
         "--confirmed-approval", action="store_true"
     )
+
+    batch_create_parser = subparsers.add_parser(
+        "maintain-batch-create",
+        help="Create a maintenance batch from existing governed proposals/candidates",
+    )
+    batch_create_parser.add_argument("--vault", required=True, type=Path)
+    batch_create_parser.add_argument("--update-proposal", action="append", default=[])
+    batch_create_parser.add_argument("--retire-proposal", action="append", default=[])
+    batch_create_parser.add_argument("--supersede-proposal", action="append", default=[])
+    batch_create_parser.add_argument("--authority-edit-proposal", action="append", default=[])
+    batch_create_parser.add_argument("--relation-candidate", action="append", default=[])
+    batch_create_parser.add_argument("--relation-revoke-candidate", action="append", default=[])
+
+    batch_approve_parser = subparsers.add_parser(
+        "maintain-batch-approve",
+        help="Approve an explicit subset of maintenance batch items",
+    )
+    batch_approve_parser.add_argument("--vault", required=True, type=Path)
+    batch_approve_parser.add_argument("--batch-id", required=True)
+    batch_approve_parser.add_argument("--item-id", action="append", default=[])
+    batch_approve_parser.add_argument("--confirmed-approval", action="store_true")
+
+    batch_execute_parser = subparsers.add_parser(
+        "maintain-batch-execute",
+        help="Execute approved maintenance items through their existing governance paths",
+    )
+    batch_execute_parser.add_argument("--vault", required=True, type=Path)
+    batch_execute_parser.add_argument("--batch-id", required=True)
 
     sync_parser = subparsers.add_parser(
         "maintain-sync", help="Synchronize current locator/fingerprint into the revision ledger"
@@ -562,6 +593,28 @@ def main(argv: list[str] | None = None) -> int:
                 args.vault,
                 proposal_id=args.proposal_id,
                 confirmed_approval=args.confirmed_approval,
+            )
+        elif args.command == "maintain-batch-create":
+            payload = create_batch(
+                args.vault,
+                update_proposals=args.update_proposal,
+                retire_proposals=args.retire_proposal,
+                supersede_proposals=args.supersede_proposal,
+                authority_edit_proposals=args.authority_edit_proposal,
+                relation_candidates=args.relation_candidate,
+                relation_revoke_candidates=args.relation_revoke_candidate,
+            )
+        elif args.command == "maintain-batch-approve":
+            payload = approve_batch(
+                args.vault,
+                batch_id=args.batch_id,
+                item_ids=args.item_id,
+                confirmed_approval=args.confirmed_approval,
+            )
+        elif args.command == "maintain-batch-execute":
+            payload = execute_batch(
+                args.vault,
+                batch_id=args.batch_id,
             )
         elif args.command == "maintain-sync":
             payload = synchronize_object(args.vault, identity=args.identity)

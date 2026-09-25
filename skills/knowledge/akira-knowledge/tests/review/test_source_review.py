@@ -419,6 +419,9 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
             for path in sorted(self.vault.rglob("*.md"))
         }
         with sqlite3.connect(self.database) as conn:
+            conn.execute("DROP TABLE maintenance_batch_item_bases")
+            conn.execute("DROP TABLE maintenance_batch_items")
+            conn.execute("DROP TABLE maintenance_batches")
             conn.execute("DROP TABLE authority_edit_proposals")
             conn.execute("DROP TABLE relation_maintenance_candidates")
             conn.execute("DROP TABLE conflict_candidate_members")
@@ -456,7 +459,7 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
                     "AND name IN ('review_findings', 'maintenance_candidates')"
                 ).fetchall()
             }
-        self.assertEqual("6", schema_version)
+        self.assertEqual("7", schema_version)
         self.assertEqual(
             {"review_findings", "maintenance_candidates"},
             tables,
@@ -467,7 +470,7 @@ class SourceReviewBlackBoxTests(unittest.TestCase):
             schema_version = conn.execute(
                 "SELECT value FROM schema_meta WHERE key = 'schema_version'"
             ).fetchone()[0]
-            self.assertEqual("6", schema_version)
+            self.assertEqual("7", schema_version)
             conn.execute("DROP TABLE maintenance_candidates")
             conn.commit()
 

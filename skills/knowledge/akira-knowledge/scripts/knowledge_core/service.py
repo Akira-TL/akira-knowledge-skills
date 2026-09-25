@@ -21,6 +21,11 @@ from knowledge_core.workflows.governance.authority_edits import (
     apply_authority_edit,
     propose_authority_edit,
 )
+from knowledge_core.workflows.governance.batch import (
+    approve_batch,
+    create_batch,
+    execute_batch,
+)
 from knowledge_core.workflows.governance.relation_candidates import (
     approve_relation_candidate,
     create_relation_candidate,
@@ -52,13 +57,16 @@ __all__ = [
     "apply_retire_proposal",
     "apply_supersede_proposal",
     "apply_update_proposal",
+    "approve_batch",
     "approve_relation_candidate",
     "approve_curate_proposal",
     "capture_material",
+    "create_batch",
     "create_curate_proposal",
     "create_retire_proposal",
     "create_supersede_proposal",
     "create_relation_candidate",
+    "execute_batch",
     "inspect_conflict_candidate",
     "inspect_relation_candidate",
     "inspect_relation_maintenance_candidate",

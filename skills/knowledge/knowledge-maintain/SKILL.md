@@ -5,7 +5,7 @@ description: 执行 revision-safe 的显式知识更新、确定性状态同步�
 
 # Knowledge Maintain
 
-`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate、Relation maintenance Review、只读 Knowledge Network 健康诊断，以及受治理的人类 wikilink / user Property 修改。批量维护仍未实现，不得提前描述为现有能力。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate、Relation maintenance Review、只读 Knowledge Network 健康诊断、受治理的人类 wikilink / user Property 修改，以及只编排既有治理记录的 Batch Review / maintenance。
 
 ## 1. 同步当前对象状态
 
@@ -313,9 +313,60 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 对已经 revoked 的关系，如果调用方提供的 expected revision 正好等于当前 revision，则作为幂等操作返回，不再次推进 revision；若使用旧 revision 重复操作，仍按 stale-write 规则 fail closed。
 
-撤回是实际 Relation Authority mutation；Relation stale / conflict Review 只产生待治理 Candidate。两者边界保持分离，Review 不得绕过 expected-revision revoke 或 Relation Candidate / approval 合同。批量 Review 继续由后续 `0.4.x` ticket 扩展。
+撤回是实际 Relation Authority mutation；Relation stale / conflict Review 只产生待治理 Candidate。两者边界保持分离，Review 不得绕过 expected-revision revoke 或 Relation Candidate / approval 合同。
 
-## 11. 停止边界
+## 11. Batch Review 与批量 revision-safe maintenance
+
+一次系统性 Review 需要组织多个已经存在的 governed proposal / candidate 时，可以创建 maintenance batch。Batch **不接受任意正文、任意 target 或任意 relation triple**，只能引用既有治理记录：
+
+- Knowledge update proposal；
+- retire / supersede lifecycle proposal；
+- human Authority edit proposal；
+- Relation Candidate；
+- Relation maintenance candidate 对应的 expected-revision revoke。
+
+创建：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-batch-create \
+  --vault <vault> \
+  --update-proposal <proposal-id> \
+  --retire-proposal <proposal-id> \
+  --supersede-proposal <proposal-id> \
+  --authority-edit-proposal <proposal-id> \
+  --relation-candidate <candidate-id> \
+  --relation-revoke-candidate <relation-maintenance-candidate-id>
+```
+
+每个 item 独立保存自己的 governance ref、target / relation identity、创建时实际读取的 revision / fingerprint basis、evidence 与 proposed semantic change。Batch 本身不是 Knowledge Object，也不拥有正文、lifecycle、relation 或 provenance Authority。
+
+用户必须明确批准要执行的 item 子集：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-batch-approve \
+  --vault <vault> \
+  --batch-id <batch-id> \
+  --item-id <approved-item-id> \
+  --confirmed-approval
+```
+
+未被选择的 pending item 明确进入 `rejected`，批准动作本身不执行任何 Authority mutation。
+
+执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-batch-execute \
+  --vault <vault> \
+  --batch-id <batch-id>
+```
+
+执行前逐项重新读取 basis。某一 item 的 revision / fingerprint 已变化时，该项记为 `stale`，不得覆盖新 Authority；其他机械独立且仍 fresh 的 approved item 可以继续执行。执行结果逐项返回 `succeeded / stale / failed / rejected`，Batch 只有全部可执行项成功时才是 `completed`；存在 stale / failed 时明确为 `partial`。
+
+真正写入仍由原有治理 workflow 完成：Knowledge update 继续 `apply_update_proposal`，retire / supersede 继续 lifecycle apply，Authority edit 继续 explicit approval apply，Relation Candidate 继续 approval，撤回继续 expected-revision revoke。Batch 没有新的通用写入口。
+
+已经 `succeeded` 的 item 是终态；重复执行同一 Batch 不再次调用其 mutation，不制造无意义 revision。Projection rebuild 只反映已经成功的 Authority mutation，本身仍不得推进额外 revision。
+
+## 12. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 
@@ -330,6 +381,8 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 - 本地 Knowledge wikilink 无法唯一解析；
 - human Authority edit proposal 的 base revision 已过期；
 - 试图通过 human Authority edit 修改 Knowledge-owned Property；
+- Batch item 的治理记录不是 pending/可执行状态，或 item basis 已变化；
+- Batch 试图引用不存在或不属于既有治理类型的 mutation；
 - 结构化 Authority store 不可读取。
 
 `0.1.x` 不引入多 Agent 锁、claim、并发仲裁或自动语义 merge；这些也不属于 Akira Knowledge 当前产品职责。

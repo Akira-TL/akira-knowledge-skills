@@ -327,7 +327,10 @@ class NetworkHealthBlackBoxTests(unittest.TestCase):
             schema_version = conn.execute(
                 "SELECT value FROM schema_meta WHERE key = 'schema_version'"
             ).fetchone()[0]
-            self.assertEqual("6", schema_version)
+            self.assertEqual("7", schema_version)
+            conn.execute("DROP TABLE maintenance_batch_item_bases")
+            conn.execute("DROP TABLE maintenance_batch_items")
+            conn.execute("DROP TABLE maintenance_batches")
             conn.execute("DROP TABLE authority_edit_proposals")
             conn.execute(
                 "UPDATE schema_meta SET value = '5' WHERE key = 'schema_version'"
@@ -353,7 +356,7 @@ class NetworkHealthBlackBoxTests(unittest.TestCase):
             proposal_count = conn.execute(
                 "SELECT COUNT(*) FROM authority_edit_proposals"
             ).fetchone()[0]
-        self.assertEqual("6", schema_version)
+        self.assertEqual("7", schema_version)
         self.assertEqual(("authority_edit_proposals",), table)
         self.assertEqual(0, proposal_count)
         self.assertEqual(before_revisions, self.revision_snapshot())
@@ -366,7 +369,7 @@ class NetworkHealthBlackBoxTests(unittest.TestCase):
     def test_v6_missing_authority_edit_governance_fails_closed(self) -> None:
         with sqlite3.connect(self.database) as conn:
             self.assertEqual(
-                "6",
+                "7",
                 conn.execute(
                     "SELECT value FROM schema_meta WHERE key='schema_version'"
                 ).fetchone()[0],
