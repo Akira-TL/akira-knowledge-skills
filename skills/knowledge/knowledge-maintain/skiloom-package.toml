@@ -1,0 +1,4 @@
+schema = 1
+
+[dependencies]
+"akira-tl/akira-knowledge-skills/akira-knowledge" = "*"

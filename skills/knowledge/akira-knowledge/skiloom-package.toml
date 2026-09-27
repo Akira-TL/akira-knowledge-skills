@@ -1,0 +1,7 @@
+schema = 1
+
+[dependencies]
+"akira-tl/akira-knowledge-skills/knowledge-capture" = "*"
+"akira-tl/akira-knowledge-skills/knowledge-curate" = "*"
+"akira-tl/akira-knowledge-skills/knowledge-maintain" = "*"
+"akira-tl/akira-knowledge-skills/knowledge-retrieve" = "*"
