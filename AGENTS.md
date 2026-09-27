@@ -17,6 +17,7 @@ Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知�
 后续增加 Skill 时：
 
 - 每个稳定 Skill 只有一个 canonical `SKILL.md`，目录名与 frontmatter `name` 一致。
+- 每个 Skill 包维护 `skiloom-package.toml`，仓库发现范围由根目录 `skiloom-repo.toml` 定义；canonical `SKILL.md` 只使用标准 Agent Skill frontmatter，执行器专属调用策略留在对应 metadata 文件中。
 - 先确定 user-invoked 或 model-invoked，再编写触发条件和正文。
 - Primary Router 只负责路由与 ownership，不复制专业 Skill 的方法正文。
 - 多步骤流程使用可检查完成条件；分支材料按需放入 sibling references。
@@ -29,8 +30,8 @@ Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知�
 ## 仓库与发布
 
 - `akira-knowledge` 的 `0.1.x` 实现已通过发布就绪门禁，但尚未完成 GitHub tag / release；README 和用户回复不得把当前仓库状态描述成已经发布的稳定版本，也不得生成未经发布流程确认的远端安装命令。
-- 不默认添加 package metadata、CI、marketplace、release automation 或 License；这些都需要独立决策。
-- 正式提交遵守 Akira 全局 Git 规则与 Guard 提交入口。
+- 当前已按明确决策维护 Skiloom Package metadata；它只描述标准 Skill 包、依赖与仓库发现范围，不授予 Registry、发布、安装或生命周期特权。CI、marketplace、release automation 与 License 仍需独立决策。
+- 修改 Skill 或 Skiloom metadata 后，从本仓根目录运行 `skiloom validate . --json`；正式提交继续遵守 Akira 全局 Git 规则与 Guard 提交入口。
 - 未来接入 Lattice 时，Lattice 只固定本仓 revision，不作为运行时 Skill source。
 
 ## Agent skills

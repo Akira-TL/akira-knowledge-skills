@@ -1,0 +1,5 @@
+interface:
+  display_name: "Akira Knowledge"
+  short_description: "Route governed long-term knowledge workflows"
+policy:
+  allow_implicit_invocation: false

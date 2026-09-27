@@ -1,7 +1,6 @@
 ---
 name: akira-knowledge
 description: 管理显式、持久、可检查、可更新和可复用的长期知识；0.1.x 基础 Knowledge Loop 与 0.2.x Retrieval + Views 均已闭合并通过发布就绪门禁。
-disable-model-invocation: true
 ---
 
 # Akira Knowledge
