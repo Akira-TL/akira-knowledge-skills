@@ -12,6 +12,12 @@ Akira Knowledge 负责显式、持久、可检查、可更新和可复用的知�
 
 0.x 系列的 Primary Router 为 `akira-knowledge`，主要用户入口保持单一。当前已确定的基础领域工作流按用户意图与知识生命周期拆为 `knowledge-capture`、`knowledge-curate`、`knowledge-retrieve`、`knowledge-maintain`；Skill 拥有行为契约而不拥有领域对象。后续 0.x 路线图只有在出现新的稳定用户意图或独立生命周期边界时才增加专业 Skill，不因新增对象、来源格式或实现技术机械拆分。需要 Obsidian Markdown、Bases、CLI 等通用操作能力时，Router 只声明复用 `kepano/obsidian-skills` 中对应 Skill；安装、加载与版本处理交给实际执行任务的 Agent 按现有 Skill 管理规则完成。本仓不重复建立 `knowledge-obsidian` 底层 Skill，只有后续确认上游能力存在明显且持续的问题时再另行决策是否自建。
 
+## 安装边界
+
+Akira Knowledge 是项目级 / Vault 级专业工作流。`akira` Router 选择 `akira-tl/akira-knowledge-skills/akira-knowledge` 后，必须从目标知识项目或 Obsidian Vault 对应工作目录使用 Skiloom `--scope workspace` 安装；不得把 Knowledge suite 安装到用户级 `~/.agents/skills` 作为跨项目共享 runtime。当前尚未完成正式 GitHub Release，开发期使用显式 Git `main` source 不得被描述为稳定版本发布。
+
+Knowledge 领域 Skill 的 dependency closure 由 `skiloom-package.toml` 解析。需要 Obsidian 通用能力时，第三方 Skill 默认跟随当前 Knowledge workspace Target；只有它被 Akira Catalog 独立定义为跨项目通用能力时才允许进入用户级 Target。
+
 ## Skill 编写
 
 后续增加 Skill 时：

@@ -26,7 +26,20 @@ Akira Knowledge 面向显式、持久、可检查、可更新和可复用的知�
 - 0.3.x：实现完成，最终独立黑盒与 0.2 → 0.3 原地升级兼容门禁已通过。
 - 0.4.x：实现完成，最终独立黑盒与真实 0.3 → 0.4 原地升级兼容门禁均已通过；包含 Knowledge Asset retire / supersede lifecycle、`retired` / `superseded` Retrieval Scope、对应 Bases 视图、可验证 Source Review → stale maintenance candidate、semantic conflict / Relation maintenance Review、只读 Knowledge Network health diagnostics、revision-safe wikilink / user Property Authority edit，以及只编排既有治理记录的 Batch Review / revision-safe maintenance。
 - 当前已实现：Vault 只读盘点、管理范围批准后的原地 registration、UUIDv7 identity、Knowledge-owned Properties、Vault 配置与 SQLite registry / revision 基础、显式 Capture 到材料记录、Curate 的 proposal → approval、新建知识资产、Exact / Filter / Full-text 基础 Retrieval、既有知识 revision-safe update、显式 Retrieval Scope、按 stable identity 去重并保留多路径命中依据的任务相关知识集合、Relation Candidate 治理与 endpoint 陈旧保护、用户明确 approval 后的 Relation Record Authority 创建、同 triple 去重与 provenance 增补、relation expected-revision 撤回与默认 traversal 排除、Knowledge Asset revision-safe retire / supersede、可验证 Source Review 与 revision-bound stale candidate、semantic conflict candidate、Relation maintenance Review、只读 Knowledge Network orphan / unresolved / dead-end diagnostics、revision-safe wikilink / user Property Authority edit、显式子集批准与逐项 partial/stale/result 的 Batch Review / maintenance、可删除重建且不拥有 Authority 的 Obsidian Bases 动态视图，以及只展示 active Relation Record 的 Obsidian Relation Graph Projection。
-- 发布状态：尚未创建 GitHub tag / release，也未执行远端安装发布。
+- 发布状态：尚未创建 GitHub tag / release，也未执行正式版本发布。
+
+## Installation boundary
+
+Akira Knowledge 是项目级 / Vault 级专业工作流，不属于用户级全局能力。运行时应从目标知识项目或 Obsidian Vault 对应工作目录，通过 Skiloom 安装到 `workspace` Target；不得安装到用户级 `~/.agents/skills` 作为所有项目共享的长期 Knowledge runtime。
+
+当前尚未完成正式 GitHub Release，因此开发期 source mode 使用显式 Git `main`，但这不等同于稳定版本发布：
+
+```text
+skiloom install akira-tl/akira-knowledge-skills/akira-knowledge --git main --scope workspace --plan --json
+skiloom install akira-tl/akira-knowledge-skills/akira-knowledge --git main --scope workspace --yes --json
+```
+
+只选择 `akira-knowledge` 作为入口；Capture / Curate / Retrieve / Maintain 的完整依赖闭包由 `skiloom-package.toml` 与 Skiloom resolver 自动解析。
 
 ## Development
 
