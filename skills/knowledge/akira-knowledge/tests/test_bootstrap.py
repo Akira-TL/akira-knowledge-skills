@@ -118,6 +118,9 @@ class BootstrapBlackBoxTests(unittest.TestCase):
         visible.write_text("# Visible\n", encoding="utf-8")
 
         noise_files = (
+            self.vault / ".agents" / "skills" / "fake" / "SKILL.md",
+            self.vault / ".skiloom" / "state" / "README.md",
+            self.vault / ".skiloom-state" / "README.md",
             self.vault / "node_modules" / "pkg" / "README.md",
             self.vault / ".venv" / "README.md",
             self.vault / "build" / "README.md",

@@ -29,6 +29,9 @@ ENGINEERING_NOISE_DIR_NAMES = frozenset(
         ".git",
         ".obsidian",
         ".akira-knowledge",
+        ".agents",
+        ".skiloom",
+        ".skiloom-state",
         ".venv",
         "venv",
         "node_modules",
@@ -73,6 +76,11 @@ Akira Knowledge Graph/
 .akira-knowledge/*.sqlite-wal
 .akira-knowledge/*.sqlite-shm
 .akira-knowledge/*.sqlite-journal
+
+# Agent / package-manager runtime projections
+.agents/
+.skiloom/
+.skiloom-state/
 
 # Dependency trees, virtual environments, caches, and build products
 node_modules/
