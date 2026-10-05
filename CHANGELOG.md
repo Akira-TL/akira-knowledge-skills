@@ -4,7 +4,7 @@
 
 ### Added
 
-- 增加单 Vault Knowledge workspace 初始化入口：建立根 `KNOWLEDGE.md` 人类 / Agent 路由、`AGENTS.md` 主动读取指针、独立 Git repository、默认 `Knowledge/` / `Projects/` / `Sources/` / `Artifacts/` 内容区，以及根级 `.akira-knowledge/knowledge.sqlite` 唯一结构化 Authority。
+- 增加单 Vault Knowledge workspace 初始化入口：建立根 `KNOWLEDGE.md` 人类 / Agent 路由、`AGENTS.md` 主动读取指针、独立 Git repository、默认 `收件箱/` / `项目/` / `知识/` / `记录/` / `成果/` / `归档/` / `系统/` 与 `.assets/` 语义内容区，以及根级 `.akira-knowledge/knowledge.sqlite` 唯一结构化 Authority；根目录不再依赖 `00`–`99` 数字前缀作为分类语义。
 - 初始化 `Akira-TL/akira-knowledge-skills` 产品仓，并确立 `akira-knowledge` 作为 Primary Router。
 - 实现 `0.1.x` 基础 Knowledge Loop：Existing Vault bootstrap / registration、显式 Capture、Curate proposal / approval、基础 Retrieval 与 revision-safe Maintenance。
 - 增加 `knowledge-capture`、`knowledge-curate`、`knowledge-retrieve`、`knowledge-maintain` 四个领域 Skill，并共享同一 Markdown / SQLite Authority、identity、revision 与 round-trip safety 合同。

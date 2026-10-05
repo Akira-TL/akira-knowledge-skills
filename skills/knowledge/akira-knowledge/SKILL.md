@@ -28,7 +28,7 @@ Akira Knowledge 的默认产品形态是一个总 Obsidian Vault / Knowledge wor
 uv run python <skill-root>/scripts/knowledge.py init --vault <vault>
 ```
 
-`init` 只负责 workspace bootstrap，不创建第二个专业 Skill。它保证 Vault 根是独立 Git repository 顶层，创建缺失的 `Knowledge/`、`Projects/`、`Sources/`、`Artifacts/` 默认入口、根 `KNOWLEDGE.md`、`.akira-knowledge/` 配置与 SQLite store，并在 `AGENTS.md` 中维护 Akira Knowledge 自有指令块，明确要求 Agent 进入该工作区后先读取根 `KNOWLEDGE.md`。已有 `KNOWLEDGE.md` 不覆盖；已有 `AGENTS.md` 与 `.gitignore` 只更新 Akira Knowledge ownership marker 内的内容，用户其他规则必须原样保留。
+`init` 只负责 workspace bootstrap，不创建第二个专业 Skill。它保证 Vault 根是独立 Git repository 顶层，创建缺失的 `收件箱/`、`项目/`、`知识/`、`记录/`、`成果/`、`归档/`、`系统/` 与 `.assets/` 默认入口、根 `KNOWLEDGE.md`、`.akira-knowledge/` 配置与 SQLite store，并在 `AGENTS.md` 中维护 Akira Knowledge 自有指令块，明确要求 Agent 进入该工作区后先读取根 `KNOWLEDGE.md`。已有 `KNOWLEDGE.md` 不覆盖；已有 `AGENTS.md` 与 `.gitignore` 只更新 Akira Knowledge ownership marker 内的内容，用户其他规则必须原样保留。
 
 根 `KNOWLEDGE.md` 是人类与 Agent 共用的顶层导航 Authority，只维护高层 Knowledge Map、主题 / 项目入口与工程工作区约定，不复制每个 Knowledge Asset、SQLite registry 或 Relation Authority，也不注册成普通 Knowledge Asset。Agent 先读它决定去哪个主题 / 项目区域，再通过 Retrieval Contract 精确找回具体知识。
 
