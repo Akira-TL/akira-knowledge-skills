@@ -8,6 +8,21 @@ from knowledge_core import storage
 from knowledge_core.common import BootstrapError, _safe_relative, _vault_root, _within_scope, _write_atomic
 from knowledge_core.ids import uuid7
 from knowledge_core.markdown import AK_ID, AK_KIND, MarkdownConflict, authority_fingerprint, has_knowledge_keys, inject_registration, registration_values
+from knowledge_core.workspace import (
+    AGENTS_BLOCK,
+    AGENTS_BLOCK_END,
+    AGENTS_BLOCK_START,
+    DEFAULT_CONTENT_DIRS,
+    GITIGNORE_BLOCK,
+    GITIGNORE_BLOCK_END,
+    GITIGNORE_BLOCK_START,
+    KNOWLEDGE_ROUTER_NAME,
+    KNOWLEDGE_ROUTER_TEMPLATE,
+    ensure_git_repository,
+    is_scan_excluded,
+    iter_markdown_files,
+    replace_or_append_managed_block,
+)
 
 
 @dataclass(frozen=True)
@@ -31,11 +46,7 @@ class RegistrationPlan:
 def inspect_vault(vault: Path) -> dict[str, object]:
     root = _vault_root(vault)
     notes: list[InspectionNote] = []
-    for path in sorted(root.rglob("*.md")):
-        if storage.SYSTEM_DIR in path.parts:
-            continue
-        if path.is_symlink():
-            continue
+    for path in sorted(iter_markdown_files(root)):
         try:
             relative = path.resolve().relative_to(root).as_posix()
             text = path.read_text(encoding="utf-8")
@@ -58,6 +69,127 @@ def inspect_vault(vault: Path) -> dict[str, object]:
         "database_exists": storage.db_path(root).exists(),
     }
 
+def initialize_workspace(vault: Path) -> dict[str, object]:
+    root = _vault_root(vault)
+    existing_config = storage.read_config(root)
+    database_exists = storage.db_path(root).exists()
+    if existing_config is not None and not database_exists:
+        raise BootstrapError(
+            "Knowledge structured Authority store is missing from an already initialized Vault"
+        )
+    if existing_config is None and database_exists:
+        raise BootstrapError(
+            "Knowledge structured Authority store exists without its Vault configuration"
+        )
+
+    for name in DEFAULT_CONTENT_DIRS:
+        target = root / name
+        if target.exists() and not target.is_dir():
+            raise BootstrapError(f"Reserved workspace path is not a directory: {name}")
+
+    router = root / KNOWLEDGE_ROUTER_NAME
+    if router.exists() and not router.is_file():
+        raise BootstrapError(f"Workspace router path is not a file: {KNOWLEDGE_ROUTER_NAME}")
+
+    for path, start, end in (
+        (root / "AGENTS.md", AGENTS_BLOCK_START, AGENTS_BLOCK_END),
+        (root / ".gitignore", GITIGNORE_BLOCK_START, GITIGNORE_BLOCK_END),
+    ):
+        if path.exists() and not path.is_file():
+            raise BootstrapError(f"Workspace control path is not a file: {path.name}")
+        existing = path.read_text(encoding="utf-8") if path.exists() else ""
+        if (start in existing) != (end in existing):
+            raise BootstrapError(f"Malformed Akira Knowledge managed block in {path.name}")
+
+    git_state = ensure_git_repository(root)
+
+    created_dirs: list[str] = []
+    for name in DEFAULT_CONTENT_DIRS:
+        target = root / name
+        if not target.exists():
+            target.mkdir()
+            created_dirs.append(name)
+
+    if router.exists():
+        router_state = "preserved"
+    else:
+        _write_atomic(router, KNOWLEDGE_ROUTER_TEMPLATE)
+        router_state = "created"
+
+    agents_state = replace_or_append_managed_block(
+        root / "AGENTS.md",
+        start=AGENTS_BLOCK_START,
+        end=AGENTS_BLOCK_END,
+        block=AGENTS_BLOCK,
+    )
+    gitignore_state = replace_or_append_managed_block(
+        root / ".gitignore",
+        start=GITIGNORE_BLOCK_START,
+        end=GITIGNORE_BLOCK_END,
+        block=GITIGNORE_BLOCK,
+    )
+
+    if existing_config is None:
+        effective_scopes = ["."]
+        effective_default_write_root = "Knowledge"
+        storage.ensure_system_dir(root)
+        conn = storage.connect(root)
+        try:
+            storage.initialize_schema(conn)
+            conn.commit()
+        finally:
+            conn.close()
+        _write_atomic(
+            storage.config_path(root),
+            storage.serialize_config(
+                scopes=effective_scopes,
+                default_write_root=effective_default_write_root,
+            ),
+        )
+        knowledge_state = "initialized"
+    else:
+        configured_scopes = existing_config.get("managed_scopes")
+        configured_default = existing_config.get("default_write_root")
+        if (
+            not isinstance(configured_scopes, list)
+            or not configured_scopes
+            or not all(isinstance(item, str) for item in configured_scopes)
+            or not isinstance(configured_default, str)
+            or not configured_default
+        ):
+            raise BootstrapError("Akira Knowledge config has invalid workspace routing data")
+        effective_scopes = configured_scopes
+        effective_default_write_root = configured_default
+        conn = storage.connect(root)
+        try:
+            storage.initialize_schema(conn)
+            conn.commit()
+        finally:
+            conn.close()
+        knowledge_state = "existing"
+
+    return {
+        "vault": str(root),
+        "git": git_state,
+        "knowledge_state": knowledge_state,
+        "knowledge_router": {
+            "path": KNOWLEDGE_ROUTER_NAME,
+            "state": router_state,
+        },
+        "agents": {
+            "path": "AGENTS.md",
+            "state": agents_state,
+        },
+        "gitignore": {
+            "path": ".gitignore",
+            "state": gitignore_state,
+        },
+        "created_directories": created_dirs,
+        "managed_scopes": effective_scopes,
+        "default_write_root": effective_default_write_root,
+    }
+
+
 def _normalize_scopes(root: Path, scopes: Sequence[str]) -> tuple[str, ...]:
     if not scopes:
         raise BootstrapError("At least one approved management scope is required")
@@ -73,6 +205,8 @@ def _validate_note(root: Path, note: str) -> tuple[str, Path]:
     locator, path = _safe_relative(root, note, must_exist=True)
     if path.is_symlink():
         raise BootstrapError(f"Refusing to register symlinked Markdown: {note}")
+    if is_scan_excluded(root, path):
+        raise BootstrapError(f"Registration target is excluded workspace infrastructure: {note}")
     if path.suffix.lower() != ".md" or not path.is_file():
         raise BootstrapError(f"Registration target must be an existing Markdown file: {note}")
     return locator, path

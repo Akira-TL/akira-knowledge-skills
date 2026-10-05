@@ -20,15 +20,27 @@ description: 管理显式、持久、可检查、可更新和可复用的长期�
 
 四个领域 Skill 共享 `akira-knowledge` 中的确定性工具和同一 SQLite / Markdown Authority 合同；领域 Skill 不各自建立数据库、sidecar、revision 规则或第二份正文真相。
 
-## 2. Existing Vault bootstrap
+## 2. 单 Vault 初始化与 Existing Vault bootstrap
 
-首次接入一个新或已有 Obsidian Vault 时，必须先执行只读盘点：
+Akira Knowledge 的默认产品形态是一个总 Obsidian Vault / Knowledge workspace：主题、项目与知识类型都位于同一 Vault 中，共享根级 `.akira-knowledge/knowledge.sqlite`，不按分类拆数据库。新建专用 Knowledge workspace 时使用 Primary Router 的初始化入口：
+
+```bash
+uv run python <skill-root>/scripts/knowledge.py init --vault <vault>
+```
+
+`init` 只负责 workspace bootstrap，不创建第二个专业 Skill。它保证 Vault 根是独立 Git repository 顶层，创建缺失的 `Knowledge/`、`Projects/`、`Sources/`、`Artifacts/` 默认入口、根 `KNOWLEDGE.md`、`.akira-knowledge/` 配置与 SQLite store，并在 `AGENTS.md` 中维护 Akira Knowledge 自有指令块，明确要求 Agent 进入该工作区后先读取根 `KNOWLEDGE.md`。已有 `KNOWLEDGE.md` 不覆盖；已有 `AGENTS.md` 与 `.gitignore` 只更新 Akira Knowledge ownership marker 内的内容，用户其他规则必须原样保留。
+
+根 `KNOWLEDGE.md` 是人类与 Agent 共用的顶层导航 Authority，只维护高层 Knowledge Map、主题 / 项目入口与工程工作区约定，不复制每个 Knowledge Asset、SQLite registry 或 Relation Authority，也不注册成普通 Knowledge Asset。Agent 先读它决定去哪个主题 / 项目区域，再通过 Retrieval Contract 精确找回具体知识。
+
+Vault 可以包含代码、框架、原型、展示、报告和可复用 artifact；这些持久化 source 正常进入 Git。`node_modules/`、`.venv/`、常见 cache / build 目录、`.git/`、`.obsidian/`、`.akira-knowledge/`、`AK Views/` 与 `AK Graph/` 等工程噪声或可重建区域不参与 Knowledge 扫描，也不得显式 registration。默认 `.gitignore` 会忽略 Projection、依赖、cache、build 与 SQLite transient 文件，但不会默认忽略 `knowledge.sqlite` 结构化 Authority。
+
+首次接入一个已有 Obsidian Vault 时，仍先执行只读盘点：
 
 ```bash
 uv run python <skill-root>/scripts/knowledge.py inspect --vault <vault>
 ```
 
-`inspect` 只报告 Markdown 与 Akira Knowledge 系统状态，不创建 `.akira-knowledge/`、不移动文件、不写 Properties，也不把普通 Markdown 自动分类成 Knowledge 对象。
+`inspect` 只报告可作为知识候选的 Markdown 与 Akira Knowledge 系统状态，并在遍历阶段剪掉依赖、虚拟环境、cache、build、Projection 与其他已定义工程噪声；不创建 `.akira-knowledge/`、不移动文件、不写 Properties，也不把普通 Markdown 自动分类成 Knowledge 对象。用户确认要把该 Vault 作为总 Knowledge workspace 后，再执行 `init` 建立根路由和工作区契约。
 
 盘点后向用户明确展示建议的 Knowledge 管理范围、准备注册为长期知识资产的现有 Markdown，以及新对象默认写入根。只有用户明确批准这一语义范围后，才能执行 registration：
 
@@ -40,7 +52,7 @@ uv run python <skill-root>/scripts/knowledge.py register \
   --default-write-root <approved-root>
 ```
 
-`--scope` 与 `--note` 可以重复。registration 必须使用用户批准的精确集合，不得把扫描到的其他 Markdown 顺带注册。
+`--scope` 与 `--note` 可以重复。registration 必须使用用户批准的精确集合，不得把扫描到的其他 Markdown 顺带注册；根 `KNOWLEDGE.md`、`AGENTS.md`、依赖树、虚拟环境、cache / build 目录和 Projection 不属于可注册 Knowledge Asset。
 
 ## 3. Registration contract
 

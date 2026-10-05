@@ -8,7 +8,8 @@ from knowledge_core.common import BootstrapError, _vault_root, _write_atomic
 from knowledge_core.persistence import relations as relation_store
 from knowledge_core.resolution import ResolvedObject, resolve_objects
 
-GRAPH_DIR_NAME = "Akira Knowledge Graph"
+GRAPH_DIR_NAME = "AK Graph"
+LEGACY_GRAPH_DIR_NAMES = ("Akira Knowledge Graph",)
 OWNERSHIP_MARKER_NAME = ".akira-knowledge-projection"
 OWNERSHIP_MARKER = "akira-knowledge-relation-graph:v1\n"
 
@@ -121,6 +122,30 @@ def rebuild_relation_graph(vault: Path) -> dict[str, object]:
         conn.close()
 
     graph_dir = root / GRAPH_DIR_NAME
+    if not graph_dir.exists():
+        for legacy_name in LEGACY_GRAPH_DIR_NAMES:
+            legacy_dir = root / legacy_name
+            if not legacy_dir.exists():
+                continue
+            legacy_marker = legacy_dir / OWNERSHIP_MARKER_NAME
+            if (
+                legacy_dir.is_dir()
+                and legacy_marker.is_file()
+            ):
+                try:
+                    legacy_marker_text = legacy_marker.read_text(encoding="utf-8")
+                except (OSError, UnicodeError):
+                    continue
+                if legacy_marker_text != OWNERSHIP_MARKER:
+                    continue
+                try:
+                    legacy_dir.rename(graph_dir)
+                except OSError as exc:
+                    raise BootstrapError(
+                        f"Cannot migrate legacy graph Projection directory: {exc}"
+                    ) from exc
+                break
+
     marker = graph_dir / OWNERSHIP_MARKER_NAME
 
     if graph_dir.exists() and not graph_dir.is_dir():

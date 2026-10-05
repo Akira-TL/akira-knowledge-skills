@@ -127,8 +127,8 @@ class Upgrade02To03BlackBoxTests(unittest.TestCase):
             path.relative_to(self.vault).as_posix(): path.read_bytes()
             for path in sorted(self.vault.rglob("*.md"))
             if ".akira-knowledge" not in path.parts
-            and "Akira Knowledge Graph" not in path.parts
-            and "Akira Knowledge Views" not in path.parts
+            and "AK Graph" not in path.parts
+            and "AK Views" not in path.parts
         }
 
     def test_real_02_vault_upgrades_in_place_and_preserves_legacy_relation(self) -> None:
@@ -277,7 +277,7 @@ class Upgrade02To03BlackBoxTests(unittest.TestCase):
         self.assertEqual(1, graph["relation_count"])
         graph_node = (
             self.vault
-            / "Akira Knowledge Graph"
+            / "AK Graph"
             / f"relation-{legacy_relation_id}.md"
         )
         graph_text = graph_node.read_text(encoding="utf-8")

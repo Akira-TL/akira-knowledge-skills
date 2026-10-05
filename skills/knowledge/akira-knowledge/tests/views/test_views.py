@@ -53,7 +53,7 @@ class DynamicViewsBlackBoxTests(unittest.TestCase):
 
     @property
     def view_dir(self) -> Path:
-        return self.vault / "Akira Knowledge Views"
+        return self.vault / "AK Views"
 
     @property
     def view_file(self) -> Path:
@@ -98,7 +98,7 @@ class DynamicViewsBlackBoxTests(unittest.TestCase):
         )
 
         self.assertTrue(payload["projection"])
-        self.assertEqual("Akira Knowledge Views/Akira Knowledge.base", payload["view_file"])
+        self.assertEqual("AK Views/Akira Knowledge.base", payload["view_file"])
         self.assertEqual(
             [
                 "Current Knowledge",
@@ -147,6 +147,20 @@ class DynamicViewsBlackBoxTests(unittest.TestCase):
 
         self.assertEqual(before_authority, self.authority_snapshot())
         self.assertEqual(before_objects, self.object_state())
+
+    def test_owned_legacy_view_directory_migrates_to_short_name(self) -> None:
+        self.run_cli("views-rebuild", "--vault", str(self.vault))
+        legacy_dir = self.vault / "Akira Knowledge Views"
+        self.view_dir.rename(legacy_dir)
+
+        payload = json.loads(
+            self.run_cli("views-rebuild", "--vault", str(self.vault)).stdout
+        )
+
+        self.assertEqual("AK Views", payload["projection_directory"])
+        self.assertTrue(self.view_dir.exists())
+        self.assertFalse(legacy_dir.exists())
+        self.assertTrue(self.view_file.exists())
 
     def test_unowned_same_name_directory_fails_closed_without_touching_user_files(self) -> None:
         foreign_dir = self.view_dir

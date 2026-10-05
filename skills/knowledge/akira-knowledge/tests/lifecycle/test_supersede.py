@@ -482,7 +482,7 @@ class SupersedeLifecycleBlackBoxTests(unittest.TestCase):
             payload["views"],
         )
         text = (
-            self.vault / "Akira Knowledge Views" / "Akira Knowledge.base"
+            self.vault / "AK Views" / "Akira Knowledge.base"
         ).read_text(encoding="utf-8")
         self.assertIn("Superseded Knowledge", text)
         self.assertIn(

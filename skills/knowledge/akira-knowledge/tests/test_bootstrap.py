@@ -36,6 +36,150 @@ class BootstrapBlackBoxTests(unittest.TestCase):
         )
         return result
 
+    def test_init_creates_single_vault_workspace_and_agent_router(self) -> None:
+        result = self.run_cli("init", "--vault", str(self.vault))
+        payload = json.loads(result.stdout)
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual("initialized", payload["git"])
+        self.assertEqual("initialized", payload["knowledge_state"])
+        self.assertEqual(["."], payload["managed_scopes"])
+        self.assertEqual("Knowledge", payload["default_write_root"])
+        for name in ("Knowledge", "Projects", "Sources", "Artifacts"):
+            self.assertTrue((self.vault / name).is_dir())
+
+        router = self.vault / "KNOWLEDGE.md"
+        agents = self.vault / "AGENTS.md"
+        gitignore = self.vault / ".gitignore"
+        self.assertTrue(router.is_file())
+        self.assertTrue(agents.is_file())
+        self.assertTrue(gitignore.is_file())
+        self.assertTrue((self.vault / ".git").is_dir())
+        self.assertTrue((self.vault / ".akira-knowledge" / "knowledge.sqlite").is_file())
+
+        router_text = router.read_text(encoding="utf-8")
+        agents_text = agents.read_text(encoding="utf-8")
+        ignore_text = gitignore.read_text(encoding="utf-8")
+        self.assertIn("## Knowledge Map", router_text)
+        self.assertIn("进入本工作区后，先读取根目录 KNOWLEDGE.md", agents_text)
+        self.assertIn("node_modules/", ignore_text)
+        self.assertIn("AK Views/", ignore_text)
+
+        config = json.loads(
+            (self.vault / ".akira-knowledge" / "config.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(["."], config["managed_scopes"])
+        self.assertEqual("Knowledge", config["default_write_root"])
+
+        router.write_text(router_text + "\n用户自己的根导航说明。\n", encoding="utf-8")
+        agents.write_text("用户自己的 Agent 规则。\n\n" + agents_text, encoding="utf-8")
+
+        second = json.loads(
+            self.run_cli("init", "--vault", str(self.vault)).stdout
+        )
+        self.assertEqual("existing", second["git"])
+        self.assertEqual("existing", second["knowledge_state"])
+        self.assertEqual("preserved", second["knowledge_router"]["state"])
+        self.assertIn("用户自己的根导航说明。", router.read_text(encoding="utf-8"))
+        self.assertIn("用户自己的 Agent 规则。", agents.read_text(encoding="utf-8"))
+        self.assertEqual(
+            1,
+            agents.read_text(encoding="utf-8").count("<!-- akira-knowledge:begin -->"),
+        )
+
+    def test_init_preserves_existing_vault_scope_and_default_write_root(self) -> None:
+        approved = self.vault / "Approved"
+        approved.mkdir()
+        note = approved / "Stable.md"
+        note.write_text("# Stable\n", encoding="utf-8")
+        self.run_cli(
+            "register",
+            "--vault", str(self.vault),
+            "--scope", "Approved",
+            "--note", "Approved/Stable.md",
+            "--default-write-root", "Approved",
+        )
+
+        payload = json.loads(
+            self.run_cli("init", "--vault", str(self.vault)).stdout
+        )
+
+        self.assertEqual(["Approved"], payload["managed_scopes"])
+        self.assertEqual("Approved", payload["default_write_root"])
+        config = json.loads(
+            (self.vault / ".akira-knowledge" / "config.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(["Approved"], config["managed_scopes"])
+        self.assertEqual("Approved", config["default_write_root"])
+
+    def test_init_and_inspect_exclude_engineering_noise(self) -> None:
+        self.run_cli("init", "--vault", str(self.vault))
+        visible = self.vault / "Knowledge" / "Visible.md"
+        visible.write_text("# Visible\n", encoding="utf-8")
+
+        noise_files = (
+            self.vault / "node_modules" / "pkg" / "README.md",
+            self.vault / ".venv" / "README.md",
+            self.vault / "build" / "README.md",
+            self.vault / "AK Graph" / "relation-test.md",
+        )
+        for path in noise_files:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# Noise\n", encoding="utf-8")
+
+        payload = json.loads(
+            self.run_cli("inspect", "--vault", str(self.vault)).stdout
+        )
+        self.assertEqual(1, payload["markdown_count"])
+        self.assertEqual(["Knowledge/Visible.md"], [item["path"] for item in payload["notes"]])
+
+        excluded = self.run_cli(
+            "register",
+            "--vault", str(self.vault),
+            "--scope", ".",
+            "--note", "node_modules/pkg/README.md",
+            "--default-write-root", "Knowledge",
+            expect=2,
+        )
+        self.assertIn("excluded workspace infrastructure", excluded.stderr)
+
+        router = self.run_cli(
+            "register",
+            "--vault", str(self.vault),
+            "--scope", ".",
+            "--note", "KNOWLEDGE.md",
+            "--default-write-root", "Knowledge",
+            expect=2,
+        )
+        self.assertIn("excluded workspace infrastructure", router.stderr)
+
+    def test_resolution_ignores_registered_identity_copies_inside_dependency_trees(self) -> None:
+        self.run_cli("init", "--vault", str(self.vault))
+        note = self.vault / "Knowledge" / "Stable.md"
+        note.write_text("# Stable\nbody\n", encoding="utf-8")
+        registered = json.loads(
+            self.run_cli(
+                "register",
+                "--vault", str(self.vault),
+                "--scope", ".",
+                "--note", "Knowledge/Stable.md",
+                "--default-write-root", "Knowledge",
+            ).stdout
+        )["registered"][0]
+
+        clone = self.vault / "node_modules" / "pkg" / "Clone.md"
+        clone.parent.mkdir(parents=True)
+        clone.write_text(note.read_text(encoding="utf-8"), encoding="utf-8")
+
+        retrieved = json.loads(
+            self.run_cli(
+                "retrieve-exact",
+                "--vault", str(self.vault),
+                "--identity", registered["identity"],
+            ).stdout
+        )
+        self.assertEqual("Knowledge/Stable.md", retrieved["result"]["canonical_locator"])
+
     def test_empty_vault_inspect_is_read_only(self) -> None:
         result = self.run_cli("inspect", "--vault", str(self.vault))
         payload = json.loads(result.stdout)

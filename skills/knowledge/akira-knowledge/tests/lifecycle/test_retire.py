@@ -126,7 +126,7 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
             "lifecycle Property disagrees with structured Authority",
             view_failed.stderr,
         )
-        self.assertFalse((self.vault / "Akira Knowledge Views").exists())
+        self.assertFalse((self.vault / "AK Views").exists())
         self.assertEqual("retired", self.lifecycle())
 
     def test_unknown_database_schema_fails_before_any_lifecycle_migration(self) -> None:
@@ -346,7 +346,7 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
             payload["views"],
         )
         text = (
-            self.vault / "Akira Knowledge Views" / "Akira Knowledge.base"
+            self.vault / "AK Views" / "Akira Knowledge.base"
         ).read_text(encoding="utf-8")
         self.assertIn("Retired Knowledge", text)
         self.assertIn('note.akira_knowledge_lifecycle == "retired"', text)

@@ -8,6 +8,7 @@ from typing import Mapping
 from knowledge_core import storage
 from knowledge_core.persistence import lifecycle as lifecycle_store
 from knowledge_core.common import BootstrapError, _safe_relative
+from knowledge_core.workspace import is_scan_excluded, iter_markdown_files
 from knowledge_core.markdown import (
     AK_ID,
     AK_KIND,
@@ -40,14 +41,16 @@ def managed_markdown_paths(root: Path) -> list[Path]:
     for scope in scopes:
         _relative, resolved = _safe_relative(root, scope, must_exist=True)
         if resolved.is_file():
-            if resolved.suffix.lower() == ".md" and not resolved.is_symlink():
+            if (
+                resolved.suffix.lower() == ".md"
+                and not resolved.is_symlink()
+                and not is_scan_excluded(root, resolved)
+            ):
                 paths.add(resolved)
             continue
         if not resolved.is_dir():
             continue
-        for candidate in resolved.rglob("*.md"):
-            if storage.SYSTEM_DIR in candidate.parts or candidate.is_symlink():
-                continue
+        for candidate in iter_markdown_files(root, resolved):
             paths.add(candidate.resolve())
     return sorted(paths)
 

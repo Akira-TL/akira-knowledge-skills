@@ -168,7 +168,7 @@ class RelationCandidateBlackBoxTests(unittest.TestCase):
             ).stdout
         )
         self.assertEqual([], traversal["results"])
-        self.assertFalse((self.vault / "Akira Knowledge Graph").exists())
+        self.assertFalse((self.vault / "AK Graph").exists())
 
     def test_reject_preserves_candidate_record_without_relation_authority(self) -> None:
         candidate = self.propose_local()

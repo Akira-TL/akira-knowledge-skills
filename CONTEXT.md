@@ -16,6 +16,14 @@
 
 只有当用户表达持久化意图，或 Knowledge Skill 正在执行明确的捕获、整理、沉淀流程时，输入才进入 Knowledge 工作流并创建材料记录。普通工程、研究或对话任务中偶然出现的内容不会因为 Agent 判断“可能有用”而自动进入长期知识库。
 
+## 单 Vault 总知识库与根路由
+
+Akira Knowledge 默认维护一个长期总 Obsidian Vault，而不是按主题、知识类型或项目拆分多套数据库。一个 Vault 只拥有一套根级 `.akira-knowledge/knowledge.sqlite` 结构化 Authority；主题、学科、项目与用途通过目录、Properties、Relation、动态视图和根路由组织。只有真实的权限、ownership 或独立生命周期边界才构成另建 Vault 的理由，普通分类需求不构成拆库理由。
+
+Vault 根目录的 `KNOWLEDGE.md` 是人类与 Agent 共用的顶层导航 Authority：它维护高层 Knowledge Map、稳定主题 / 项目入口与工程工作区约定，不复制每个 Knowledge Asset、SQLite registry 或 Relation Authority。Agent 进入该 Vault 后先读根 `KNOWLEDGE.md`，再选择相关主题或项目区域；精确知识查找继续使用 Retrieval Contract。根 `KNOWLEDGE.md` 不注册成普通 Knowledge Asset，也不由 Projection 自动覆盖。初始化在根 `AGENTS.md` 中维护 Akira Knowledge 自有指令块，要求 Agent 主动读取该路由，同时保留用户已有的其他 Agent 规则。
+
+Knowledge Vault 同时允许承载代码、框架、实验实现、原型、展示、报告、可视化和其他长期可复用 artifact。默认内容入口为 `Knowledge/`、`Projects/`、`Sources/` 与 `Artifacts/`，但这些只是初始化默认导航，不是固定 taxonomy；用户可以通过 `KNOWLEDGE.md` 继续扩展长期结构。依赖树、虚拟环境、缓存、测试缓存、构建目录和可再生产物不是 Knowledge；`.git/`、`.obsidian/`、`.akira-knowledge/`、`node_modules/`、`.venv/`、常见 cache/build 目录以及 `AK Views/` / `AK Graph/` 等路径必须在扫描遍历阶段直接剪枝，也不得作为显式 registration 目标。
+
 ## 导航链接
 
 表示由用户在人类可读内容中主动维护、主要用于阅读跳转与知识浏览的普通链接。导航链接只承诺存在人类导航关联，不自动表达关系类型、方向、因果、支持、冲突或 provenance 等机器语义，也不因存在 backlink 而获得反向关系语义。

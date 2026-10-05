@@ -1,4 +1,4 @@
-from knowledge_core.workflows.bootstrap import inspect_vault, register_notes
+from knowledge_core.workflows.bootstrap import initialize_workspace, inspect_vault, register_notes
 from knowledge_core.workflows.capture import capture_material
 from knowledge_core.common import BootstrapError
 from knowledge_core.workflows.curate import approve_curate_proposal, create_curate_proposal, reject_curate_proposal
@@ -71,6 +71,7 @@ __all__ = [
     "inspect_relation_candidate",
     "inspect_relation_maintenance_candidate",
     "inspect_review_candidate",
+    "initialize_workspace",
     "inspect_vault",
     "plan_source_review",
     "propose_authority_edit",

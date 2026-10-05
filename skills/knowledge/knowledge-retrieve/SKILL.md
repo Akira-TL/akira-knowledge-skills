@@ -128,7 +128,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-graph-r
   --vault <vault>
 ```
 
-该命令只读取当前 `active` Relation Record，并在 Akira Knowledge 自有的 `Akira Knowledge Graph/` Projection 目录生成机器 Markdown relation node。每个节点至少展示 relation identity、type、revision、source、target 与全部 provenance；本地 Knowledge endpoint 按 stable identity 重新解析当前 canonical locator 并生成 Obsidian wikilink，external reference 只显示为外部引用，不伪装成本地链接。
+该命令只读取当前 `active` Relation Record，并在 Akira Knowledge 自有的 `AK Graph/` Projection 目录生成机器 Markdown relation node。每个节点至少展示 relation identity、type、revision、source、target 与全部 provenance；本地 Knowledge endpoint 按 stable identity 重新解析当前 canonical locator 并生成 Obsidian wikilink，external reference 只显示为外部引用，不伪装成本地链接。
 
 Graph Projection node 不是 Knowledge Asset，也不是 Relation Authority，不带 `akira_knowledge_id`。删除整个 Projection 目录、删除单个 node 或损坏 node 后都可以从结构化 Relation Authority 重建；rebuild 不推进 Relation Record 或 Knowledge 对象 revision。endpoint 发生纯 rename / move 时，relation identity / revision 不变，下一次 rebuild 使用新的 canonical locator。
 

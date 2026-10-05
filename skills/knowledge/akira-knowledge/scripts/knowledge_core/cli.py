@@ -26,6 +26,7 @@ from knowledge_core.service import (
     inspect_relation_candidate,
     inspect_relation_maintenance_candidate,
     inspect_review_candidate,
+    initialize_workspace,
     inspect_vault,
     plan_source_review,
     propose_authority_edit,
@@ -55,6 +56,11 @@ from knowledge_core.storage import StorageError
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="akira-knowledge-store")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init_parser = subparsers.add_parser(
+        "init", help="Initialize one Git-backed Akira Knowledge Vault workspace"
+    )
+    init_parser.add_argument("--vault", required=True, type=Path)
 
     inspect_parser = subparsers.add_parser("inspect", help="Read-only Vault inventory")
     inspect_parser.add_argument("--vault", required=True, type=Path)
@@ -452,7 +458,9 @@ def _parse_property_filters(items: list[str]) -> dict[str, str]:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if args.command == "inspect":
+        if args.command == "init":
+            payload = initialize_workspace(args.vault)
+        elif args.command == "inspect":
             payload = inspect_vault(args.vault)
         elif args.command == "register":
             payload = register_notes(

@@ -70,7 +70,7 @@ class RouterRelationLoopBlackBoxTests(unittest.TestCase):
 
     @property
     def graph_dir(self) -> Path:
-        return self.vault / "Akira Knowledge Graph"
+        return self.vault / "AK Graph"
 
     def run_router(self, *args: str, expect: int = 0) -> subprocess.CompletedProcess[str]:
         result = subprocess.run(

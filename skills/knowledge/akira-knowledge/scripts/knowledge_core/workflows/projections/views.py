@@ -6,7 +6,8 @@ from knowledge_core import storage
 from knowledge_core.common import BootstrapError, _vault_root, _write_atomic
 from knowledge_core.resolution import resolve_objects
 
-VIEW_DIR_NAME = "Akira Knowledge Views"
+VIEW_DIR_NAME = "AK Views"
+LEGACY_VIEW_DIR_NAMES = ("Akira Knowledge Views",)
 VIEW_FILE_NAME = "Akira Knowledge.base"
 OWNERSHIP_MARKER_NAME = ".akira-knowledge-projection"
 OWNERSHIP_MARKER = "akira-knowledge-views:v1\n"
@@ -74,6 +75,30 @@ def rebuild_dynamic_views(vault: Path) -> dict[str, object]:
         conn.close()
 
     view_dir = root / VIEW_DIR_NAME
+    if not view_dir.exists():
+        for legacy_name in LEGACY_VIEW_DIR_NAMES:
+            legacy_dir = root / legacy_name
+            if not legacy_dir.exists():
+                continue
+            legacy_marker = legacy_dir / OWNERSHIP_MARKER_NAME
+            if (
+                legacy_dir.is_dir()
+                and legacy_marker.is_file()
+            ):
+                try:
+                    legacy_marker_text = legacy_marker.read_text(encoding="utf-8")
+                except (OSError, UnicodeError):
+                    continue
+                if legacy_marker_text != OWNERSHIP_MARKER:
+                    continue
+                try:
+                    legacy_dir.rename(view_dir)
+                except OSError as exc:
+                    raise BootstrapError(
+                        f"Cannot migrate legacy view Projection directory: {exc}"
+                    ) from exc
+                break
+
     marker = view_dir / OWNERSHIP_MARKER_NAME
     view_file = view_dir / VIEW_FILE_NAME
 

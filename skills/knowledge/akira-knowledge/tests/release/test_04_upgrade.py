@@ -100,8 +100,8 @@ class Upgrade03To04BlackBoxTests(unittest.TestCase):
             path.relative_to(self.vault).as_posix(): path.read_bytes()
             for path in sorted(self.vault.rglob("*.md"))
             if ".akira-knowledge" not in path.parts
-            and "Akira Knowledge Graph" not in path.parts
-            and "Akira Knowledge Views" not in path.parts
+            and "AK Graph" not in path.parts
+            and "AK Views" not in path.parts
         }
 
     def snapshot_core(self) -> dict[str, list[tuple[object, ...]]]:

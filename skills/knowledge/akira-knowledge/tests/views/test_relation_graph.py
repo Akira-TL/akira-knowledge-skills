@@ -50,7 +50,7 @@ class RelationGraphBlackBoxTests(unittest.TestCase):
 
     @property
     def graph_dir(self) -> Path:
-        return self.vault / "Akira Knowledge Graph"
+        return self.vault / "AK Graph"
 
     def run_cli(self, *args: str, expect: int = 0) -> subprocess.CompletedProcess[str]:
         result = subprocess.run(
@@ -217,6 +217,19 @@ class RelationGraphBlackBoxTests(unittest.TestCase):
         state = self.relation_state(relation_id)
         self.assertEqual("revoked", state[6])
         self.assertEqual(2, state[5])
+
+    def test_owned_legacy_graph_directory_migrates_to_short_name(self) -> None:
+        self.approve_relation()
+        self.rebuild()
+        legacy_dir = self.vault / "Akira Knowledge Graph"
+        self.graph_dir.rename(legacy_dir)
+
+        payload = self.rebuild()
+
+        self.assertEqual("AK Graph", payload["projection_directory"])
+        self.assertTrue(self.graph_dir.exists())
+        self.assertFalse(legacy_dir.exists())
+        self.assertEqual(1, payload["relation_count"])
 
     def test_unowned_same_name_directory_fails_closed(self) -> None:
         self.approve_relation()
