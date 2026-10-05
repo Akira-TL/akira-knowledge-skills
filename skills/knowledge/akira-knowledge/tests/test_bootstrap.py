@@ -44,9 +44,11 @@ class BootstrapBlackBoxTests(unittest.TestCase):
         self.assertEqual("initialized", payload["git"])
         self.assertEqual("initialized", payload["knowledge_state"])
         self.assertEqual(["."], payload["managed_scopes"])
-        self.assertEqual("知识", payload["default_write_root"])
-        for name in ("收件箱", "项目", "知识", "记录", "成果", "归档", "系统", ".assets"):
+        self.assertEqual("收件箱", payload["default_write_root"])
+        for name in ("收件箱", "系统", ".assets"):
             self.assertTrue((self.vault / name).is_dir())
+        for name in ("项目", "知识", "记录", "成果", "归档", "科研", "公司与产品", "技术", "设计与创作", "个人"):
+            self.assertFalse((self.vault / name).exists())
 
         router = self.vault / "KNOWLEDGE.md"
         agents = self.vault / "AGENTS.md"
@@ -69,7 +71,7 @@ class BootstrapBlackBoxTests(unittest.TestCase):
             (self.vault / ".akira-knowledge" / "config.json").read_text(encoding="utf-8")
         )
         self.assertEqual(["."], config["managed_scopes"])
-        self.assertEqual("知识", config["default_write_root"])
+        self.assertEqual("收件箱", config["default_write_root"])
 
         router.write_text(router_text + "\n用户自己的根导航说明。\n", encoding="utf-8")
         agents.write_text("用户自己的 Agent 规则。\n\n" + agents_text, encoding="utf-8")
@@ -114,7 +116,9 @@ class BootstrapBlackBoxTests(unittest.TestCase):
 
     def test_init_and_inspect_exclude_engineering_noise(self) -> None:
         self.run_cli("init", "--vault", str(self.vault))
-        visible = self.vault / "知识" / "Visible.md"
+        domain = self.vault / "科研"
+        domain.mkdir()
+        visible = domain / "Visible.md"
         visible.write_text("# Visible\n", encoding="utf-8")
 
         noise_files = (
@@ -134,7 +138,7 @@ class BootstrapBlackBoxTests(unittest.TestCase):
             self.run_cli("inspect", "--vault", str(self.vault)).stdout
         )
         self.assertEqual(1, payload["markdown_count"])
-        self.assertEqual(["知识/Visible.md"], [item["path"] for item in payload["notes"]])
+        self.assertEqual(["科研/Visible.md"], [item["path"] for item in payload["notes"]])
 
         excluded = self.run_cli(
             "register",
@@ -158,15 +162,17 @@ class BootstrapBlackBoxTests(unittest.TestCase):
 
     def test_resolution_ignores_registered_identity_copies_inside_dependency_trees(self) -> None:
         self.run_cli("init", "--vault", str(self.vault))
-        note = self.vault / "知识" / "Stable.md"
+        domain = self.vault / "科研"
+        domain.mkdir()
+        note = domain / "Stable.md"
         note.write_text("# Stable\nbody\n", encoding="utf-8")
         registered = json.loads(
             self.run_cli(
                 "register",
                 "--vault", str(self.vault),
                 "--scope", ".",
-                "--note", "知识/Stable.md",
-                "--default-write-root", "知识",
+                "--note", "科研/Stable.md",
+                "--default-write-root", "科研",
             ).stdout
         )["registered"][0]
 
@@ -181,7 +187,7 @@ class BootstrapBlackBoxTests(unittest.TestCase):
                 "--identity", registered["identity"],
             ).stdout
         )
-        self.assertEqual("知识/Stable.md", retrieved["result"]["canonical_locator"])
+        self.assertEqual("科研/Stable.md", retrieved["result"]["canonical_locator"])
 
     def test_empty_vault_inspect_is_read_only(self) -> None:
         result = self.run_cli("inspect", "--vault", str(self.vault))

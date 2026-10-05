@@ -131,7 +131,7 @@ def initialize_workspace(vault: Path) -> dict[str, object]:
 
     if existing_config is None:
         effective_scopes = ["."]
-        effective_default_write_root = "知识"
+        effective_default_write_root = "收件箱"
         storage.ensure_system_dir(root)
         conn = storage.connect(root)
         try:

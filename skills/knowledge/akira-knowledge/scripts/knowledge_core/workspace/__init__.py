@@ -13,7 +13,7 @@ KNOWLEDGE_ROUTER_NAME = "KNOWLEDGE.md"
 AGENTS_NAME = "AGENTS.md"
 GITIGNORE_NAME = ".gitignore"
 
-DEFAULT_CONTENT_DIRS = ("收件箱", "项目", "知识", "记录", "成果", "归档", "系统", ".assets")
+DEFAULT_CONTENT_DIRS = ("收件箱", "系统", ".assets")
 
 PROJECTION_DIR_NAMES = frozenset(
     {
@@ -114,20 +114,17 @@ KNOWLEDGE_ROUTER_TEMPLATE = """# Knowledge
 | 路由 | 用途 | 入口 |
 | --- | --- | --- |
 | 收件箱 | 尚未判断归属的新内容，只用于暂存和后续整理 | 收件箱/ |
-| 项目 | 有明确目标、持续推进的工作；项目知识、代码、框架、原型和项目记录跟项目放在一起 | 项目/ |
-| 知识 | 可跨任务复用、长期维护和继续验证的知识 | 知识/ |
-| 记录 | 按时间发生的事实、会议、日志、任务、样品和数据记录 | 记录/ |
-| 成果 | 面向他人的课程、文章、报告、演示、网站和其他完成品 | 成果/ |
-| 归档 | 已结束、被替代或仅保留作历史追溯的内容 | 归档/ |
 | 系统 | 知识库自身的规范、模板、自动化、审计和维护记录 | 系统/ |
+
+其余一级目录不由 Akira Knowledge 强制创建。应根据真实知识领域在这里定义，例如“科研”“公司与产品”“技术”“设计与创作”“个人”等；目录名本身就是第一层人类路由。
 
 新增稳定主题或长期项目时，在这里增加一条路由；不要把每篇笔记都列成目录索引。精确知识查找继续使用 Akira Knowledge Retrieval。
 
 ## Workspace Rules
 
 - 这是一个总 Vault：主题、项目和知识类型是逻辑分类，不各自建立 .akira-knowledge/ 或独立数据库。
-- 代码、框架和原型是允许存在的一等工作内容，应放在对应 项目/<project>/ 内并正常进入 Git；不要为了代码再建立独立的根级工程仓。
-- 值得长期保留的展示、报告和导出进入 成果/，或跟随其 owning 项目放在项目目录内；不要把临时导出散落在 Vault 根目录。
+- 代码、框架、原型、记录和成果应跟随其 owning 领域或工作对象组织；不要因为文件类型在根目录机械拆出“项目 / 知识 / 记录 / 成果”四套横切目录。
+- 一级分类优先使用稳定领域语义；生命周期和对象类型放到领域内部表达。不要把临时导出散落在 Vault 根目录。
 - node_modules/、.venv/、依赖缓存、测试缓存、构建目录和其他可再生产物不是 Knowledge，也不参与 Knowledge 扫描。
 - .akira-knowledge/ 保存结构化 Authority；AK Views/ 与 AK Graph/ 只是可重建 Projection。
 - KNOWLEDGE.md 自身是顶层导航 Authority，不注册成普通 Knowledge Asset，也不由 Projection 自动覆盖。

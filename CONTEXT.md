@@ -22,7 +22,7 @@ Akira Knowledge 默认维护一个长期总 Obsidian Vault，而不是按主题�
 
 Vault 根目录的 `KNOWLEDGE.md` 是人类与 Agent 共用的顶层导航 Authority：它维护高层 Knowledge Map、稳定主题 / 项目入口与工程工作区约定，不复制每个 Knowledge Asset、SQLite registry 或 Relation Authority。Agent 进入该 Vault 后先读根 `KNOWLEDGE.md`，再选择相关主题或项目区域；精确知识查找继续使用 Retrieval Contract。根 `KNOWLEDGE.md` 不注册成普通 Knowledge Asset，也不由 Projection 自动覆盖。初始化在根 `AGENTS.md` 中维护 Akira Knowledge 自有指令块，要求 Agent 主动读取该路由，同时保留用户已有的其他 Agent 规则。
 
-Knowledge Vault 同时允许承载代码、框架、实验实现、原型、展示、报告、可视化和其他长期可复用 artifact。新 Vault 默认内容入口为 `收件箱/`、`项目/`、`知识/`、`记录/`、`成果/`、`归档/`、`系统/` 与 `.assets/`；这些目录名本身承担第一层人类路由，不使用 `00`–`99` 数字前缀要求用户记忆分类。它们仍只是初始化默认导航，不是固定 taxonomy；用户可以通过 `KNOWLEDGE.md` 继续扩展长期结构。依赖树、虚拟环境、缓存、测试缓存、构建目录和可再生产物不是 Knowledge；`.git/`、`.obsidian/`、`.akira-knowledge/`、`node_modules/`、`.venv/`、常见 cache/build 目录以及 `AK Views/` / `AK Graph/` 等路径必须在扫描遍历阶段直接剪枝，也不得作为显式 registration 目标。
+Knowledge Vault 同时允许承载代码、框架、实验实现、原型、展示、报告、可视化和其他长期可复用 artifact。初始化只提供 `收件箱/`、`系统/` 与 `.assets/` 三个最低公共入口，不强制创建“项目 / 知识 / 记录 / 成果”等横切 taxonomy。真正的一级内容目录应由用户根据稳定领域语义在 `KNOWLEDGE.md` 中定义，例如科研、公司与产品、技术、设计与创作、个人等；目录名本身承担第一层人类路由，不依赖 `00`–`99` 数字前缀。依赖树、虚拟环境、缓存、测试缓存、构建目录和可再生产物不是 Knowledge；`.git/`、`.obsidian/`、`.akira-knowledge/`、`node_modules/`、`.venv/`、常见 cache/build 目录以及 `AK Views/` / `AK Graph/` 等路径必须在扫描遍历阶段直接剪枝，也不得作为显式 registration 目标。
 
 ## 导航链接
 
