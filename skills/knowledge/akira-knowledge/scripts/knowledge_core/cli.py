@@ -28,6 +28,9 @@ from knowledge_core.service import (
     inspect_review_candidate,
     initialize_workspace,
     inspect_vault,
+    inspect_human_readable_knowledge,
+    compare_human_readable_knowledge,
+    format_writing_findings,
     plan_source_review,
     propose_authority_edit,
     propose_conflict,
@@ -61,6 +64,20 @@ def build_parser() -> argparse.ArgumentParser:
         "init", help="Initialize one Git-backed Akira Knowledge Vault workspace"
     )
     init_parser.add_argument("--vault", required=True, type=Path)
+
+    writing_parser = subparsers.add_parser(
+        "writing-check",
+        help="Check one candidate Knowledge Asset body against the human-readable writing contract",
+    )
+    writing_parser.add_argument("--body")
+    writing_parser.add_argument("--body-file", type=Path)
+    writing_parser.add_argument("--baseline")
+    writing_parser.add_argument("--baseline-file", type=Path)
+    writing_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail when style warnings remain, not only on structural errors",
+    )
 
     inspect_parser = subparsers.add_parser("inspect", help="Read-only Vault inventory")
     inspect_parser.add_argument("--vault", required=True, type=Path)
@@ -458,7 +475,45 @@ def _parse_property_filters(items: list[str]) -> dict[str, str]:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if args.command == "init":
+        if args.command == "writing-check":
+            if bool(args.body) == bool(args.body_file):
+                raise BootstrapError(
+                    "Writing check requires exactly one of --body or --body-file"
+                )
+            writing_body = (
+                args.body_file.read_text(encoding="utf-8") if args.body_file else args.body
+            )
+            if args.baseline and args.baseline_file:
+                raise BootstrapError(
+                    "Writing check accepts at most one of --baseline or --baseline-file"
+                )
+            baseline_body = (
+                args.baseline_file.read_text(encoding="utf-8")
+                if args.baseline_file
+                else args.baseline
+            )
+            if baseline_body is None:
+                payload = inspect_human_readable_knowledge(writing_body)
+                errors = payload["errors"]
+                warnings = payload["warnings"]
+            else:
+                payload = compare_human_readable_knowledge(
+                    baseline_body,
+                    writing_body,
+                )
+                errors = payload["regressions"]["errors"]
+                warnings = payload["regressions"]["warnings"]
+            if errors:
+                raise BootstrapError(
+                    "Human-readable Knowledge Writing Review has structural regressions: "
+                    + format_writing_findings(errors)
+                )
+            if args.strict and warnings:
+                raise BootstrapError(
+                    "Human-readable Knowledge Writing Review still has style regressions: "
+                    + format_writing_findings(warnings)
+                )
+        elif args.command == "init":
             payload = initialize_workspace(args.vault)
         elif args.command == "inspect":
             payload = inspect_vault(args.vault)

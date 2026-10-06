@@ -180,7 +180,7 @@ class MaintainBlackBoxTests(unittest.TestCase):
         self.assertEqual(2, self.object_state()[1])
         self.assertEqual(["registered", "external_edit"], self.revision_events())
 
-        proposal = self.propose_update(material["identity"], "Proposal from revision 2.\n")
+        proposal = self.propose_update(material["identity"], "# Existing\n\nProposal from revision 2.\n")
         self.assertEqual(2, proposal["base_revision"])
 
     def test_unapproved_update_is_unchanged_then_approved_update_advances_revision(self) -> None:
@@ -217,7 +217,7 @@ class MaintainBlackBoxTests(unittest.TestCase):
 
     def test_direct_edit_after_proposal_makes_update_stale_and_preserves_newer_authority(self) -> None:
         material = self.capture("evidence for stale proposal")
-        proposal = self.propose_update(material["identity"], "Stale proposed body.\n")
+        proposal = self.propose_update(material["identity"], "# Existing\n\nStale proposed body.\n")
         self.assertEqual(1, proposal["base_revision"])
 
         current = self.target.read_text(encoding="utf-8")
@@ -239,7 +239,7 @@ class MaintainBlackBoxTests(unittest.TestCase):
 
     def test_move_after_proposal_is_disjoint_and_update_applies_at_new_locator(self) -> None:
         material = self.capture("evidence for move-safe update")
-        proposal = self.propose_update(material["identity"], "Updated after move.\n")
+        proposal = self.propose_update(material["identity"], "# Existing\n\nUpdated after move.\n")
         moved = self.knowledge / "MovedAfterProposal.md"
         self.target.rename(moved)
 
@@ -250,7 +250,7 @@ class MaintainBlackBoxTests(unittest.TestCase):
         self.assertEqual(3, applied["revision"])
         moved_text = moved.read_text(encoding="utf-8")
         self.assertIn("topic: stable-user-property\n", moved_text)
-        self.assertTrue(moved_text.endswith("Updated after move.\n"))
+        self.assertTrue(moved_text.endswith("# Existing\n\nUpdated after move.\n"))
         self.assertEqual(
             ["registered", "external_move", "updated_from_proposal"],
             self.revision_events(),

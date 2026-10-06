@@ -7,7 +7,15 @@ description: 执行 revision-safe 的显式知识更新、确定性状态同步�
 
 `knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate、Relation maintenance Review、只读 Knowledge Network 健康诊断、受治理的人类 wikilink / user Property 修改，以及只编排既有治理记录的 Batch Review / maintenance。
 
-## 1. 同步当前对象状态
+## 1. Human-readable 正文维护边界
+
+正文更新继续遵守 `<akira-knowledge-skill-root>/references/human-readable-writing.md`。Maintenance 不负责重新发明写作内容，但在执行已批准 update 时必须确认 proposal 已通过 Curate 的 Human-readable Writing Review。
+
+不得以“统一格式”“润色”“让它更像知识库”为理由顺手重写未批准段落。对批准范围内实际触及的段落，应维持或改善标题可检索、重点前置、一个段落一个意思、句法直接、列表真实并列、verification 与不确定性表达明确等性质。
+
+如果用户直接在 Obsidian 修改正文并导致当前 Authority 不符合写作合同，Maintenance 只能报告该问题或形成受治理的更新提案；不能绕过 Curate 直接大规模改写。
+
+## 2. 同步当前对象状态
 
 用户直接在 Obsidian 中移动、重命名或编辑已注册 Markdown 后，进入维护或写入准备时先同步对象：
 
@@ -23,7 +31,7 @@ Authority fingerprint 只用于已注册 Markdown 的外部内容变更检测，
 
 材料记录的状态由结构化 Authority 拥有；如果用户手工修改了 Markdown 中的 `akira_knowledge_status` 镜像而与结构化状态不一致，维护流程必须把它视为 drift 并 fail closed，而不是把该镜像静默接管为 Authority。
 
-## 2. 既有知识更新提案
+## 3. 既有知识更新提案
 
 既有知识的正文语义更新仍由 `knowledge-curate` 形成 proposal。形成候选正文前先执行 `maintain-sync`，记录返回的 current revision，再读取当前 Authority；`knowledge-curate` 保存 update proposal 时必须携带这个实际读取的 `base_revision`。proposal 保存阶段会再次同步目标，如果期间 revision 已变化则立即停止，防止把基于旧正文生成的 proposal 错绑到新状态。依据材料也在 proposal 保存前同步并记录 basis revision。
 
@@ -42,7 +50,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-u
 
 纯 `external_move` 只改变 locator，可以机械证明与已批准的正文替换互不相交，因此允许在新的 canonical locator 上继续执行。当前版本不做猜测式语义三方合并。
 
-## 3. 应用更新
+## 4. 应用更新
 
 通过 revision 门禁后，只替换知识资产的人类正文 body，保留现有 YAML frontmatter、用户 Properties 与 Akira Knowledge identity / kind。成功写入后：
 
@@ -56,7 +64,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-u
 
 Projection / 全文索引重建不得推进 Authority revision；这一职责继续由 `knowledge-retrieve` 的可重建 Projection 机制承担。
 
-## 4. Knowledge Asset 明确退役
+## 5. Knowledge Asset 明确退役
 
 用户明确决定某个当前 Knowledge Asset 不再进入默认当前知识范围时，先基于实际读取的 current revision 形成退役提案：
 
@@ -89,7 +97,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-r
 
 退役不等于 supersede；退役不记录 replacement target。
 
-## 5. Knowledge Asset 明确替代
+## 6. Knowledge Asset 明确替代
 
 用户明确决定一个当前 Knowledge Asset 已由另一个当前 Knowledge Asset 承担后续职责时，先同时绑定旧对象与 replacement 的实际 revision：
 
@@ -122,7 +130,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-s
 - replacement 继续作为自己的 `current` Knowledge Asset；
 - 已非 current 的对象不会被 retire / supersede 命令静默改写成另一 lifecycle。
 
-## 6. Source Review 与陈旧候选
+## 7. Source Review 与陈旧候选
 
 当用户要求系统性检查某个当前 Knowledge Asset 的既有 Source 时，先从公开入口取得其 provenance Source 集合，不直接查询 SQLite：
 
@@ -177,7 +185,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-reject-
 
 Review Candidate 不提供直接“批准并改 Authority”的旁路。需要正文更新时继续进入 `knowledge-curate` 的 update proposal → approval；需要 retire / supersede 时继续使用本 Skill 的 lifecycle proposal。
 
-## 7. Semantic Conflict Candidate
+## 8. Semantic Conflict Candidate
 
 当前主模型在实际读取两个或多个当前治理对象后，如果判断它们可能无法同时成立，只能形成待治理 conflict candidate，不直接修改任何 Authority：
 
@@ -212,7 +220,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-reject-
 
 拒绝只改变 Candidate governance 状态，不修改 Knowledge / lifecycle / Relation Authority。当前实现不引入 ontology、inverse / symmetry / transitive inference 或自动规则推理。
 
-## 8. Relation maintenance Review
+## 9. Relation maintenance Review
 
 对 active Relation Record 形成 stale / conflict maintenance candidate 时：
 
@@ -235,7 +243,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-inspect
 
 Relation maintenance Candidate 没有 apply 命令，也不能原地改变既有 source / type / target triple。真正需要撤回时继续使用 `relation-revoke --expected-revision`；需要新的 relation 语义时继续使用 `relation-propose → relation-approve`。用户也可以通过 `maintain-reject-relation-maintenance --confirmed-rejection` 拒绝候选而不修改 Relation Authority。
 
-## 9. Knowledge Network 健康诊断与链接 / 属性维护
+## 10. Knowledge Network 健康诊断与链接 / 属性维护
 
 需要检查当前 Knowledge-managed 网络时，使用只读入口：
 
@@ -287,7 +295,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-a
 
 执行前重新同步目标；只要 current revision 不再等于 proposal base revision，就按 stale fail closed，不覆盖用户期间产生的较新 edit / move。成功后保持 stable identity，推进 Knowledge revision，并在 revision ledger 记录 `authority_edit_applied`。该路径只修改已批准的人类 Authority，不自动创建 typed relation。
 
-## 10. Relation Record 显式撤回
+## 11. Relation Record 显式撤回
 
 用户明确要求撤回一个当前正式关系时，调用方必须先读取该 Relation Record 的当前 revision，并在确认后执行：
 
@@ -315,7 +323,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py relation-revoke 
 
 撤回是实际 Relation Authority mutation；Relation stale / conflict Review 只产生待治理 Candidate。两者边界保持分离，Review 不得绕过 expected-revision revoke 或 Relation Candidate / approval 合同。
 
-## 11. Batch Review 与批量 revision-safe maintenance
+## 12. Batch Review 与批量 revision-safe maintenance
 
 一次系统性 Review 需要组织多个已经存在的 governed proposal / candidate 时，可以创建 maintenance batch。Batch **不接受任意正文、任意 target 或任意 relation triple**，只能引用既有治理记录：
 
@@ -366,7 +374,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-batch-e
 
 已经 `succeeded` 的 item 是终态；重复执行同一 Batch 不再次调用其 mutation，不制造无意义 revision。Projection rebuild 只反映已经成功的 Authority mutation，本身仍不得推进额外 revision。
 
-## 12. 停止边界
+## 13. 停止边界
 
 以下情况必须停止而不是覆盖或猜测：
 

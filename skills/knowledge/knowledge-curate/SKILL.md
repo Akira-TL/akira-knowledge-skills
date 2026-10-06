@@ -9,9 +9,51 @@ description: 把材料整理成长期知识正文提案、为既有知识形成�
 
 ## 1. 形成提案
 
-读取用户指定或当前工作流选定的一个或多个材料记录，由当前主模型直接形成拟长期保存的正文。提案必须是一个可独立理解、值得长期维护的知识单元；不得机械要求一条资产只包含一个 Claim 或 Concept。
+每次形成新建或正文更新 proposal 前，必须先读取共享写作合同：
 
-把模型已经形成的候选正文写入 proposal store：
+```text
+<akira-knowledge-skill-root>/references/human-readable-writing.md
+```
+
+读取用户指定或当前工作流选定的一个或多个材料记录，由当前主模型直接形成拟长期保存的正文。提案必须是一个可独立理解、值得长期维护和未来检索的高内聚知识单元；不得机械要求一条资产只包含一个 Claim 或 Concept，也不得把多个能够独立检索的问题拼成“大而全”的长文。
+
+Knowledge Asset 是给人长期查阅的参考文档，不是对话记录、Agent 思考过程、一次性分析报告或材料摘要堆叠。正文必须至少做到：
+
+- 标题具体、可搜索，并能代表正文边界；
+- 一级标题后直接给定义、结论、用途、适用范围或核心问题，不写生成式铺垫；
+- 一个普通段落表达一个完整意思，既不形成墙状长段，也不连续堆叠碎片化单句段；
+- 小节标题描述读者实际能找到的内容，层级连续；
+- 列表只表示真实并列或顺序，连续论述使用段落；
+- 事实、方法建议、构想和待核验内容显式区分；
+- 需要复用已有知识时优先 wikilink 到 owning Knowledge Asset，不复制整段制造多份 Authority；
+- 删除“本文将”“下面首先”“值得注意的是”“从上述分析可以看出”“综上所述”等不增加语义的 AI 元话语。
+
+完整句长、段落、列表、标题、aliases、不同知识类型默认骨架与反 AI 写作规则以共享 reference 为准。
+
+在把候选正文写入 proposal store 之前，必须先执行 Human-readable Writing Review。主模型按共享 reference 完成语义自检。
+
+新建 Knowledge Asset 时运行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py writing-check \
+  --body-file <proposal-body-file> \
+  --strict
+```
+
+更新既有 Knowledge Asset 时使用当前 Authority 作为 baseline：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py writing-check \
+  --baseline-file <current-authority-file> \
+  --body-file <proposal-body-file> \
+  --strict
+```
+
+baseline 模式只阻止新增或加重的结构 / 风格问题。已有写作债务不会因为一次无关语义更新而强迫顺手重写；需要系统性润色时应单独形成明确的正文更新提案。
+
+确定性 checker 只检查明确结构问题和高置信风格 findings，不负责判断事实真伪。新建 proposal 必须清零 finding；update proposal 不得产生新的 regression。后端会再次执行同一门禁，不能通过跳过命令绕过。
+
+把通过 review 的候选正文写入 proposal store：
 
 ```bash
 uv run python <akira-knowledge-skill-root>/scripts/knowledge.py curate-propose \
@@ -33,7 +75,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py curate-propose \
 
 保存 proposal 时工具会再次同步目标；若 revision 已不同，说明“读取 → 形成 proposal”期间 Authority 又发生变化，必须 fail closed 并重新读取，而不能把旧内容生成的 proposal 绑定到新 revision。proposal 是 candidate，不是人类内容 Authority；创建 proposal 不得改写目标知识 Markdown。
 
-向用户展示拟批准的语义变更集：目标是新建还是更新、拟正文、依据材料，以及会发生的确定性 metadata / provenance / 状态维护。不得把 proposal 持久化本身描述成“知识已经更新”。
+向用户展示拟批准的语义变更集：目标是新建还是更新、拟正文、依据材料、Human-readable Writing Review 结果，以及会发生的确定性 metadata / provenance / 状态维护。不得把 proposal 持久化本身描述成“知识已经更新”。
 
 ## 2. 用户批准或拒绝
 
@@ -122,7 +164,7 @@ approval 会在同一受控事务中重新解析内部 endpoint；若 Authority 
 新建知识资产的 Curate 只有在以下条件同时成立时完成：
 
 - 用户已经看到并明确批准语义变更集；
-- 新知识资产 Markdown 正文与批准文本一致；
+- 新知识资产 Markdown 正文与批准文本一致，并通过 Human-readable Knowledge Writing Contract；
 - 新对象 identity / revision / provenance 已建立；
 - 依据材料仍然存在并可追溯；
 - 确定性状态维护已完成且未扩张新的语义决定。

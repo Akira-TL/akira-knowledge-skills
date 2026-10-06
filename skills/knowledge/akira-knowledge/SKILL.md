@@ -73,7 +73,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 5. 路由到 Curate
 
-用户要把一个或多个材料记录整理成长期知识、形成对既有知识资产的普通补充 / 纠错提案，或提出正式机器关系时，路由到 sibling `knowledge-curate` Skill。`0.3.x` 已实现 Relation Candidate 的提出、重新检查、批准与拒绝：Candidate 不是 Relation Authority，也不参与 traversal；只有用户明确批准后才创建或补充 Relation Record。相同 active triple 复用 relation identity，新 provenance 推进 relation revision，重复 provenance 不制造无意义 revision。模型推断、普通 wikilink、tag 或相似度不得自动升级关系；Router 不自行生成或直接写 Relation Record。
+用户要把一个或多个材料记录整理成长期知识、形成对既有知识资产的普通补充 / 纠错提案，或提出正式机器关系时，路由到 sibling `knowledge-curate` Skill。凡涉及新建或正文更新 Knowledge Asset，Curate 必须先读取 `<akira-knowledge-skill-root>/references/human-readable-writing.md` 并完成 Human-readable Writing Review；Router 不接受把聊天稿、模型思考过程、一次性报告或明显 AI 风格草稿直接当作长期 Knowledge proposal。`0.3.x` 已实现 Relation Candidate 的提出、重新检查、批准与拒绝：Candidate 不是 Relation Authority，也不参与 traversal；只有用户明确批准后才创建或补充 Relation Record。相同 active triple 复用 relation identity，新 provenance 推进 relation revision，重复 provenance 不制造无意义 revision。模型推断、普通 wikilink、tag 或相似度不得自动升级关系；Router 不自行生成或直接写 Relation Record。
 
 ## 6. 路由到 Retrieval
 

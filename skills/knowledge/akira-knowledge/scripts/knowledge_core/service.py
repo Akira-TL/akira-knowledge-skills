@@ -50,6 +50,7 @@ from knowledge_core.workflows.governance.review import (
 from knowledge_core.workflows.diagnostics.network_health import scan_network_health
 from knowledge_core.workflows.projections.relation_graph import rebuild_relation_graph
 from knowledge_core.workflows.projections.views import rebuild_dynamic_views
+from knowledge_core.writing import compare_human_readable_knowledge, format_writing_findings, inspect_human_readable_knowledge
 
 __all__ = [
     "BootstrapError",
@@ -73,6 +74,9 @@ __all__ = [
     "inspect_review_candidate",
     "initialize_workspace",
     "inspect_vault",
+    "inspect_human_readable_knowledge",
+    "format_writing_findings",
+    "compare_human_readable_knowledge",
     "plan_source_review",
     "propose_authority_edit",
     "propose_conflict",

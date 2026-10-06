@@ -79,6 +79,9 @@ class CurateBlackBoxTests(unittest.TestCase):
         self.assertEqual("pending", proposal["status"])
         self.assertEqual("create", proposal["proposal_kind"])
         self.assertEqual(body, proposal["proposed_body"])
+        self.assertTrue(proposal["writing_review"]["ok"])
+        self.assertEqual([], proposal["writing_review"]["errors"])
+        self.assertEqual([], proposal["writing_review"]["warnings"])
         self.assertEqual([], list((self.vault / "Knowledge").glob("知识-*.md")))
 
         approved = json.loads(self.approve(proposal["proposal_id"]).stdout)
@@ -110,9 +113,23 @@ class CurateBlackBoxTests(unittest.TestCase):
         self.assertEqual(2, len(links))
         self.assertEqual({1}, {row[1] for row in links})
 
+    def test_curate_proposal_rejects_unresolved_writing_findings(self) -> None:
+        material = self.capture("需要整理的材料")
+        result = self.run_cli(
+            "curate-propose",
+            "--vault", str(self.vault),
+            "--material-id", material["identity"],
+            "--body", "# 参数选择\n\n参数必须结合数据判断。\n\n## 总结\n\n不要机械复制参数。\n",
+            expect=2,
+        )
+        self.assertIn("generic_heading", result.stderr)
+        with sqlite3.connect(self.vault / ".akira-knowledge" / "knowledge.sqlite") as conn:
+            proposal_count = conn.execute("SELECT COUNT(*) FROM proposals").fetchone()[0]
+        self.assertEqual(0, proposal_count)
+
     def test_unapproved_proposal_does_not_write_knowledge_authority(self) -> None:
         material = self.capture("等待用户批准")
-        proposal = self.propose_create([material["identity"]], "候选正文")
+        proposal = self.propose_create([material["identity"]], "# 候选知识\n\n候选正文。\n")
 
         result = self.run_cli(
             "curate-approve",
@@ -138,7 +155,7 @@ class CurateBlackBoxTests(unittest.TestCase):
         material = self.capture("不会被批准的材料")
         material_path = self.vault / material["locator"]
         before = material_path.read_text(encoding="utf-8")
-        proposal = self.propose_create([material["identity"]], "不会落地的正文")
+        proposal = self.propose_create([material["identity"]], "# 未批准知识\n\n不会落地的正文。\n")
 
         result = self.run_cli(
             "curate-reject",
@@ -160,7 +177,7 @@ class CurateBlackBoxTests(unittest.TestCase):
 
     def test_update_proposal_is_candidate_only_until_revision_safe_workflow(self) -> None:
         first_material = self.capture("用于创建初始知识")
-        create = self.propose_create([first_material["identity"]], "初始正文")
+        create = self.propose_create([first_material["identity"]], "# 初始知识\n\n初始正文。\n")
         created = json.loads(self.approve(create["proposal_id"]).stdout)
         asset_path = self.vault / created["asset_locator"]
         before = asset_path.read_text(encoding="utf-8")
@@ -172,12 +189,15 @@ class CurateBlackBoxTests(unittest.TestCase):
             "--material-id", update_material["identity"],
             "--target-id", created["asset_identity"],
             "--base-revision", "1",
-            "--body", "更新后的候选正文",
+            "--body", "# 初始知识\n\n更新后的候选正文。\n",
         ]
         proposal = json.loads(self.run_cli(*args).stdout)
         self.assertEqual("update", proposal["proposal_kind"])
         self.assertEqual(created["asset_identity"], proposal["target_identity"])
         self.assertEqual(1, proposal["base_revision"])
+        self.assertTrue(proposal["writing_review"]["strict_ok"])
+        self.assertEqual([], proposal["writing_review"]["regressions"]["errors"])
+        self.assertEqual([], proposal["writing_review"]["regressions"]["warnings"])
         self.assertEqual(before, asset_path.read_text(encoding="utf-8"))
 
         failed = self.approve(proposal["proposal_id"], expect=2)

@@ -34,7 +34,7 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py capture \
 
 每次显式 Capture 都创建新的材料记录，并得到独立 UUIDv7 identity、初始 revision、`material_record` 对象类别与 `待处理` 状态。即使 Source locator 相同，也不得自动合并两个 Capture；工具可以返回去重候选供后续判断，但不会执行语义 merge。
 
-材料 Markdown 的正文就是用户原始 capture note。Capture 阶段不得自动把模型生成的摘要、标签、解释、关系或冲突判断写进人类内容 Authority。Source locator、capture 时间和确定性 provenance 保存在结构化 Authority 中。
+材料 Markdown 的正文就是用户原始 capture note。Capture 阶段不得自动把模型生成的摘要、标签、解释、关系或冲突判断写进人类内容 Authority，也不得为了满足 Human-readable Knowledge Writing Contract 先润色、压缩或重排用户输入。该写作合同从 Curate 形成长期 Knowledge Asset proposal 时才生效。Source locator、capture 时间和确定性 provenance 保存在结构化 Authority 中。
 
 新材料写入用户已经批准的默认写入根；如果 Vault 尚未 bootstrap、配置越界、结构化 Authority store 缺失或写入前提不成立，必须 fail closed。
 

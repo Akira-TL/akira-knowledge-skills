@@ -4,6 +4,7 @@
 
 ### Added
 
+- 增加 Human-readable Knowledge Writing Contract 与确定性 `writing-check`：Curate 新建正文必须清零结构 / 风格 finding，更新正文以当前 Authority 为 baseline，只阻止新增或加重写作问题；合同覆盖检索型标题、段落与句子密度、标题层级、列表 / 表格、wikilink、verification 与反 AI 元话语，并明确 Capture 保留原始输入不执行润色。
 - 增加单 Vault Knowledge workspace 初始化入口：建立根 `KNOWLEDGE.md` 人类 / Agent 路由、`AGENTS.md` 主动读取指针、独立 Git repository、最低公共 `收件箱/` / `系统/` / `.assets/` 入口，以及根级 `.akira-knowledge/knowledge.sqlite` 唯一结构化 Authority；一级内容 taxonomy 改由 `KNOWLEDGE.md` 按真实领域定义，不再强制“项目 / 知识 / 记录 / 成果”或 `00`–`99` 数字前缀。
 - 初始化 `Akira-TL/akira-knowledge-skills` 产品仓，并确立 `akira-knowledge` 作为 Primary Router。
 - 实现 `0.1.x` 基础 Knowledge Loop：Existing Vault bootstrap / registration、显式 Capture、Curate proposal / approval、基础 Retrieval 与 revision-safe Maintenance。

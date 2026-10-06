@@ -8,6 +8,7 @@ from knowledge_core.common import BootstrapError, _safe_relative, _vault_root, _
 from knowledge_core.ids import uuid7
 from knowledge_core.markdown import AK_ID, AK_KIND, AK_STATUS, MarkdownConflict, authority_fingerprint, create_knowledge_asset_markdown, registration_values, replace_knowledge_property
 from knowledge_core.workflows.maintain import sync_object_in_connection
+from knowledge_core.writing import compare_human_readable_knowledge, format_writing_findings, inspect_human_readable_knowledge
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,19 @@ def create_curate_proposal(
     root = _vault_root(vault)
     if not proposed_body:
         raise BootstrapError("Curate proposal body must not be empty")
+    writing_review: dict[str, object] | None = None
+    if target_identity is None:
+        writing_review = inspect_human_readable_knowledge(proposed_body)
+        if writing_review["errors"]:
+            raise BootstrapError(
+                "Curate proposal violates the Human-readable Knowledge Writing Contract: "
+                + format_writing_findings(writing_review["errors"])
+            )
+        if writing_review["warnings"]:
+            raise BootstrapError(
+                "Curate proposal still has Human-readable Writing findings: "
+                + format_writing_findings(writing_review["warnings"])
+            )
     if not material_ids:
         raise BootstrapError("Curate proposal requires at least one material record")
     material_ids = tuple(dict.fromkeys(material_ids))
@@ -75,6 +89,22 @@ def create_curate_proposal(
                 )
             proposal_kind = "update"
             base_revision = expected_base_revision
+            writing_review = compare_human_readable_knowledge(
+                target_sync.text,
+                proposed_body,
+            )
+            regression_errors = writing_review["regressions"]["errors"]
+            if regression_errors:
+                raise BootstrapError(
+                    "Curate update proposal introduces Human-readable Writing regressions: "
+                    + format_writing_findings(regression_errors)
+                )
+            regression_warnings = writing_review["regressions"]["warnings"]
+            if regression_warnings:
+                raise BootstrapError(
+                    "Curate update proposal introduces Human-readable Writing findings: "
+                    + format_writing_findings(regression_warnings)
+                )
         elif expected_base_revision is not None:
             raise BootstrapError("base revision is only valid for an update proposal")
 
@@ -104,6 +134,7 @@ def create_curate_proposal(
             for identity, revision in material_bases
         ],
         "proposed_body": proposed_body,
+        "writing_review": writing_review,
     }
 
 
