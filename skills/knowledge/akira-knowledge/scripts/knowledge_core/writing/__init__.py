@@ -8,6 +8,8 @@ from typing import Iterable
 
 _FRONTMATTER_RE = re.compile(r"\A---\r?\n.*?\r?\n---\r?\n", re.DOTALL)
 _FENCE_RE = re.compile(r"(?ms)^\s*(`{3,}|~{3,}).*?^\s*\1\s*$")
+_BRACKET_MATH_RE = re.compile(r"(?ms)^\s*\\\[\s*$.*?^\s*\\\]\s*$")
+_DOLLAR_MATH_RE = re.compile(r"(?ms)^\s*\$\$\s*$.*?^\s*\$\$\s*$")
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _LIST_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
 _TABLE_RE = re.compile(r"^\s*\|.*\|\s*$")
@@ -70,11 +72,13 @@ def _strip_frontmatter(text: str) -> str:
     return _FRONTMATTER_RE.sub("", text, count=1)
 
 
-def _strip_fenced_code(text: str) -> str:
+def _strip_non_prose_blocks(text: str) -> str:
     def preserve_lines(match: re.Match[str]) -> str:
         return "\n" * match.group(0).count("\n")
 
-    return _FENCE_RE.sub(preserve_lines, text)
+    text = _FENCE_RE.sub(preserve_lines, text)
+    text = _BRACKET_MATH_RE.sub(preserve_lines, text)
+    return _DOLLAR_MATH_RE.sub(preserve_lines, text)
 
 
 def _sentence_count(paragraph: str) -> int:
@@ -128,7 +132,7 @@ def _paragraphs(lines: list[str]) -> list[tuple[int, int, str]]:
 
 
 def inspect_human_readable_knowledge(text: str) -> dict[str, object]:
-    body = _strip_fenced_code(_strip_frontmatter(text))
+    body = _strip_non_prose_blocks(_strip_frontmatter(text))
     lines = body.splitlines()
     findings: list[WritingFinding] = []
 
@@ -340,7 +344,7 @@ def inspect_human_readable_knowledge(text: str) -> dict[str, object]:
             )
         )
 
-    body_without_code = _strip_fenced_code(body)
+    body_without_code = _strip_non_prose_blocks(body)
     for phrase in _AI_META_PHRASES:
         count = body_without_code.count(phrase)
         if count:

@@ -11,6 +11,10 @@
 - 增加 `knowledge-capture`、`knowledge-curate`、`knowledge-retrieve`、`knowledge-maintain` 四个领域 Skill，并共享同一 Markdown / SQLite Authority、identity、revision 与 round-trip safety 合同。
 - 建立 canonical 临时 Obsidian Vault 黑盒测试接缝与 `docs/validation/0.1-release-gate.md` 发布就绪验收证据；当前尚未创建 GitHub tag / release。
 
+### Fixed
+
+- `writing-check` 现在把块级 LaTeX `\\[...\\]` 与 `$$...$$` 视为非正文块并保留原行号占位，避免统计 / 科研知识中的长公式被误判为 `long_sentence` 或墙状段落。
+
 ### Changed
 
 - Knowledge 扫描与 identity resolution 在遍历阶段排除 `.git/`、`.obsidian/`、`.akira-knowledge/`、`node_modules/`、`.venv/`、cache / build 目录以及 `AK Views/` / `AK Graph/` Projection；这些路径也不能显式 registration，避免工程依赖和生成物污染总知识库。

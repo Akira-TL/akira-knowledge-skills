@@ -139,6 +139,25 @@ class HumanReadableWritingTests(unittest.TestCase):
         )
         self.assertIn("generic_heading", result.stderr)
 
+    def test_display_math_does_not_trigger_prose_findings(self) -> None:
+        long_formula = " + ".join(f"x_{{{i}}}" for i in range(80))
+        body = (
+            "# 数学公式示例\n\n"
+            "效应量由下面的块级公式定义。\n\n"
+            "\\[\n"
+            + long_formula
+            + "\n\\]\n\n"
+            "公式后的解释继续作为普通段落检查。\n\n"
+            "$$\n"
+            + long_formula
+            + "\n$$\n"
+        )
+        payload = json.loads(
+            self.run_cli("writing-check", "--body", body, "--strict").stdout
+        )
+        self.assertTrue(payload["ok"])
+        self.assertEqual([], payload["warnings"])
+
     def test_code_fence_does_not_trigger_prose_findings(self) -> None:
         code_lines = "\n".join(f"- generated-code-{i}-" + ("x" * 220) for i in range(25))
         fence = chr(96) * 3
