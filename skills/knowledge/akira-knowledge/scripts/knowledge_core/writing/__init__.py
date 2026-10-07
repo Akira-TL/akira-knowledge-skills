@@ -10,6 +10,7 @@ _FRONTMATTER_RE = re.compile(r"\A---\r?\n.*?\r?\n---\r?\n", re.DOTALL)
 _FENCE_RE = re.compile(r"(?ms)^\s*(`{3,}|~{3,}).*?^\s*\1\s*$")
 _BRACKET_MATH_RE = re.compile(r"(?ms)^\s*\\\[\s*$.*?^\s*\\\]\s*$")
 _DOLLAR_MATH_RE = re.compile(r"(?ms)^\s*\$\$\s*$.*?^\s*\$\$\s*$")
+_MARKDOWN_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]+\)")
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _LIST_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
 _TABLE_RE = re.compile(r"^\s*\|.*\|\s*$")
@@ -81,8 +82,12 @@ def _strip_non_prose_blocks(text: str) -> str:
     return _DOLLAR_MATH_RE.sub(preserve_lines, text)
 
 
+def _visible_prose(text: str) -> str:
+    return _MARKDOWN_LINK_RE.sub(lambda match: match.group(1), text)
+
+
 def _sentence_count(paragraph: str) -> int:
-    compact = re.sub(r"\s+", " ", paragraph).strip()
+    compact = re.sub(r"\s+", " ", _visible_prose(paragraph)).strip()
     if not compact:
         return 0
     chunks = [chunk for chunk in _SENTENCE_SPLIT_RE.split(compact) if chunk.strip()]
@@ -90,7 +95,7 @@ def _sentence_count(paragraph: str) -> int:
 
 
 def _max_sentence_length(paragraph: str) -> int:
-    compact = re.sub(r"\s+", " ", paragraph).strip()
+    compact = re.sub(r"\s+", " ", _visible_prose(paragraph)).strip()
     if not compact:
         return 0
     chunks = [chunk.strip() for chunk in _SENTENCE_SPLIT_RE.split(compact) if chunk.strip()]
@@ -236,7 +241,7 @@ def inspect_human_readable_knowledge(text: str) -> dict[str, object]:
             single_streak_start = None
 
         sentence_count = _sentence_count(paragraph)
-        char_count = len(re.sub(r"\s+", "", paragraph))
+        char_count = len(re.sub(r"\s+", "", _visible_prose(paragraph)))
         max_sentence = _max_sentence_length(paragraph)
 
         if char_count >= 500 or sentence_count >= 9:

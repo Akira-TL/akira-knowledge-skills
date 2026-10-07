@@ -158,6 +158,20 @@ class HumanReadableWritingTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual([], payload["warnings"])
 
+    def test_long_markdown_link_destination_does_not_count_toward_sentence_length(self) -> None:
+        body = (
+            "# 引用链接示例\n\n"
+            "该结论已有官方资料支持。"
+            "[官方文档](https://example.org/"
+            + ("very-long-path/" * 30)
+            + "manual.html)\n"
+        )
+        payload = json.loads(
+            self.run_cli("writing-check", "--body", body, "--strict").stdout
+        )
+        self.assertTrue(payload["ok"])
+        self.assertEqual([], payload["warnings"])
+
     def test_code_fence_does_not_trigger_prose_findings(self) -> None:
         code_lines = "\n".join(f"- generated-code-{i}-" + ("x" * 220) for i in range(25))
         fence = chr(96) * 3
