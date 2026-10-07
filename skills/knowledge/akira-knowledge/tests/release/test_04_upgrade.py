@@ -257,7 +257,7 @@ class Upgrade03To04BlackBoxTests(unittest.TestCase):
             foreign_key_errors = conn.execute("PRAGMA foreign_key_check").fetchall()
             integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
 
-        self.assertEqual("7", str(after_schema))
+        self.assertEqual("8", str(after_schema))
         self.assertEqual(
             {(a, "current", None), (b, "current", None)},
             set(lifecycle_rows),

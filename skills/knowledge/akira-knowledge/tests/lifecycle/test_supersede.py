@@ -239,7 +239,7 @@ class SupersedeLifecycleBlackBoxTests(unittest.TestCase):
                 for row in conn.execute("PRAGMA table_info(lifecycle_proposals)").fetchall()
             }
 
-        self.assertEqual("7", schema_version)
+        self.assertEqual("8", schema_version)
         self.assertEqual(("retired", None), lifecycle)
         self.assertEqual(
             [(2, "retired", "retired", "Retired before v3 migration.", None)],

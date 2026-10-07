@@ -121,6 +121,95 @@ class MaintainBlackBoxTests(unittest.TestCase):
             ).fetchall()
         return [row[0] for row in rows]
 
+    def test_material_resolution_is_explicit_revision_safe_and_stable_after_sync(self) -> None:
+        material = self.capture("reference material that does not warrant a Knowledge Asset")
+        material_path = self.vault / material["locator"]
+
+        denied = self.run_cli(
+            "maintain-resolve-material",
+            "--vault", str(self.vault),
+            "--identity", material["identity"],
+            "--expected-revision", "1",
+            "--reason", "Useful source, but no durable knowledge needs to be extracted.",
+            expect=2,
+        )
+        self.assertIn("explicit user confirmation", denied.stderr)
+        self.assertIn("akira_knowledge_status: 待处理\n", material_path.read_text(encoding="utf-8"))
+
+        resolved = json.loads(
+            self.run_cli(
+                "maintain-resolve-material",
+                "--vault", str(self.vault),
+                "--identity", material["identity"],
+                "--expected-revision", "1",
+                "--reason", "Useful source, but no durable knowledge needs to be extracted.",
+                "--confirmed-resolution",
+            ).stdout
+        )
+        self.assertEqual("已处理", resolved["status"])
+        self.assertEqual(2, resolved["revision"])
+        self.assertEqual("material_resolved", resolved["event"])
+        self.assertIn("akira_knowledge_status: 已处理\n", material_path.read_text(encoding="utf-8"))
+
+        synced = json.loads(
+            self.run_cli(
+                "maintain-sync",
+                "--vault", str(self.vault),
+                "--identity", material["identity"],
+            ).stdout
+        )
+        self.assertFalse(synced["changed"])
+        self.assertEqual(2, synced["revision"])
+
+        with sqlite3.connect(self.database) as conn:
+            material_state = conn.execute(
+                "SELECT status FROM material_records WHERE identity = ?",
+                (material["identity"],),
+            ).fetchone()[0]
+            revision_event = conn.execute(
+                "SELECT event FROM revisions WHERE identity = ? AND revision = 2",
+                (material["identity"],),
+            ).fetchone()[0]
+            resolution = conn.execute(
+                "SELECT reason FROM material_resolution_events "
+                "WHERE identity = ? AND revision = 2",
+                (material["identity"],),
+            ).fetchone()[0]
+        self.assertEqual("已处理", material_state)
+        self.assertEqual("material_resolved", revision_event)
+        self.assertEqual(
+            "Useful source, but no durable knowledge needs to be extracted.",
+            resolution,
+        )
+
+    def test_material_resolution_rejects_stale_revision(self) -> None:
+        material = self.capture("material whose current revision changes before resolution")
+        material_path = self.vault / material["locator"]
+        material_path.write_text(
+            material_path.read_text(encoding="utf-8") + "\nUser annotation.\n",
+            encoding="utf-8",
+        )
+        synced = json.loads(
+            self.run_cli(
+                "maintain-sync",
+                "--vault", str(self.vault),
+                "--identity", material["identity"],
+            ).stdout
+        )
+        self.assertEqual(2, synced["revision"])
+
+        stale = self.run_cli(
+            "maintain-resolve-material",
+            "--vault", str(self.vault),
+            "--identity", material["identity"],
+            "--expected-revision", "1",
+            "--reason", "No extraction required.",
+            "--confirmed-resolution",
+            expect=2,
+        )
+        self.assertIn("revision changed", stale.stderr)
+        self.assertIn("akira_knowledge_status: 待处理\n", material_path.read_text(encoding="utf-8"))
+
     def test_move_sync_updates_locator_and_revision_without_changing_identity(self) -> None:
         moved_dir = self.knowledge / "Moved"
         moved_dir.mkdir()

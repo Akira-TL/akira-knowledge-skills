@@ -6,9 +6,13 @@ from pathlib import Path
 import sqlite3
 import sys
 
+from knowledge_core.cli_commands.authority_edits import (
+    AUTHORITY_EDIT_COMMANDS,
+    dispatch_authority_edit_command,
+    register_authority_edit_commands,
+)
 from knowledge_core.service import (
     BootstrapError,
-    apply_authority_edit,
     apply_retire_proposal,
     apply_supersede_proposal,
     apply_update_proposal,
@@ -32,7 +36,6 @@ from knowledge_core.service import (
     compare_human_readable_knowledge,
     format_writing_findings,
     plan_source_review,
-    propose_authority_edit,
     propose_conflict,
     propose_relation_maintenance,
     rebuild_dynamic_views,
@@ -48,6 +51,7 @@ from knowledge_core.service import (
     retrieve_filter,
     retrieve_full_text,
     retrieve_task_package,
+    resolve_material,
     review_source,
     revoke_relation,
     scan_network_health,
@@ -242,39 +246,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     health_parser.add_argument("--vault", required=True, type=Path)
 
-    authority_edit_propose_parser = subparsers.add_parser(
-        "maintain-propose-authority-edit",
-        help="Create a revision-bound proposal for one human Authority wikilink or Property edit",
-    )
-    authority_edit_propose_parser.add_argument("--vault", required=True, type=Path)
-    authority_edit_propose_parser.add_argument("--identity", required=True)
-    authority_edit_propose_parser.add_argument(
-        "--base-revision", required=True, type=int
-    )
-    authority_edit_group = authority_edit_propose_parser.add_mutually_exclusive_group(
-        required=True
-    )
-    authority_edit_group.add_argument(
-        "--replace-wikilink",
-        nargs=2,
-        metavar=("OLD_TARGET", "NEW_TARGET"),
-    )
-    authority_edit_group.add_argument(
-        "--set-property",
-        nargs=2,
-        metavar=("KEY", "VALUE"),
-    )
-    authority_edit_propose_parser.add_argument("--reason", required=True)
-
-    authority_edit_apply_parser = subparsers.add_parser(
-        "maintain-apply-authority-edit",
-        help="Apply an explicitly approved revision-bound human Authority edit",
-    )
-    authority_edit_apply_parser.add_argument("--vault", required=True, type=Path)
-    authority_edit_apply_parser.add_argument("--proposal-id", required=True)
-    authority_edit_apply_parser.add_argument(
-        "--confirmed-approval", action="store_true"
-    )
+    register_authority_edit_commands(subparsers)
 
     batch_create_parser = subparsers.add_parser(
         "maintain-batch-create",
@@ -309,6 +281,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sync_parser.add_argument("--vault", required=True, type=Path)
     sync_parser.add_argument("--identity", required=True)
+
+    material_resolve_parser = subparsers.add_parser(
+        "maintain-resolve-material",
+        help="Explicitly mark one pending Material Record processed without creating Knowledge",
+    )
+    material_resolve_parser.add_argument("--vault", required=True, type=Path)
+    material_resolve_parser.add_argument("--identity", required=True)
+    material_resolve_parser.add_argument("--expected-revision", required=True, type=int)
+    material_resolve_parser.add_argument("--reason", required=True)
+    material_resolve_parser.add_argument(
+        "--confirmed-resolution", action="store_true"
+    )
 
     update_parser = subparsers.add_parser(
         "maintain-apply-update", help="Apply an approved update proposal with revision protection"
@@ -634,29 +618,8 @@ def main(argv: list[str] | None = None) -> int:
             payload = rebuild_relation_graph(args.vault)
         elif args.command == "maintain-health-scan":
             payload = scan_network_health(args.vault)
-        elif args.command == "maintain-propose-authority-edit":
-            payload = propose_authority_edit(
-                args.vault,
-                identity=args.identity,
-                expected_base_revision=args.base_revision,
-                reason=args.reason,
-                wikilink_replacement=(
-                    None
-                    if args.replace_wikilink is None
-                    else tuple(args.replace_wikilink)
-                ),
-                property_update=(
-                    None
-                    if args.set_property is None
-                    else tuple(args.set_property)
-                ),
-            )
-        elif args.command == "maintain-apply-authority-edit":
-            payload = apply_authority_edit(
-                args.vault,
-                proposal_id=args.proposal_id,
-                confirmed_approval=args.confirmed_approval,
-            )
+        elif args.command in AUTHORITY_EDIT_COMMANDS:
+            payload = dispatch_authority_edit_command(args)
         elif args.command == "maintain-batch-create":
             payload = create_batch(
                 args.vault,
@@ -681,6 +644,14 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "maintain-sync":
             payload = synchronize_object(args.vault, identity=args.identity)
+        elif args.command == "maintain-resolve-material":
+            payload = resolve_material(
+                args.vault,
+                identity=args.identity,
+                expected_revision=args.expected_revision,
+                reason=args.reason,
+                confirmed_resolution=args.confirmed_resolution,
+            )
         elif args.command == "maintain-apply-update":
             payload = apply_update_proposal(
                 args.vault,

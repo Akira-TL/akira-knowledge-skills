@@ -5,7 +5,7 @@ description: 执行 revision-safe 的显式知识更新、确定性状态同步�
 
 # Knowledge Maintain
 
-`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate、Relation maintenance Review、只读 Knowledge Network 健康诊断、受治理的人类 wikilink / user Property 修改，以及只编排既有治理记录的 Batch Review / maintenance。
+`knowledge-maintain` 负责显式用户触发的 revision-safe 更新和确定性状态同步；也负责把已经判断“无需继续沉淀”的 `待处理` 材料记录显式结案为 `已处理`。`0.3.x` 由本 Skill 执行已接受 Relation Record 的显式撤回，`0.4.x` 已增加 Knowledge Asset 的退役 / supersede lifecycle、可验证 Source Review → stale candidate、semantic conflict candidate、Relation maintenance Review、只读 Knowledge Network 健康诊断、受治理的人类 wikilink / user Property 修改，以及只编排既有治理记录的 Batch Review / maintenance。
 
 ## 1. Human-readable 正文维护边界
 
@@ -63,6 +63,21 @@ uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-apply-u
 - 仍为 `待处理` 的依据材料可以确定性进入 `已处理`，材料本身不删除。
 
 Projection / 全文索引重建不得推进 Authority revision；这一职责继续由 `knowledge-retrieve` 的可重建 Projection 机制承担。
+
+### 材料记录无需沉淀时的显式结案
+
+材料被阅读、核验后，用户可能明确判断它只需要保留作来源或参考，不值得创建 / 更新任何 Knowledge Asset。此时不得伪造一个空 proposal，也不得让材料永久停留在 `待处理`；先同步并读取材料当前 revision，再执行：
+
+```bash
+uv run python <akira-knowledge-skill-root>/scripts/knowledge.py maintain-resolve-material \
+  --vault <vault> \
+  --identity <material-id> \
+  --expected-revision <actually-read-revision> \
+  --reason <why-no-durable-knowledge-is-needed> \
+  --confirmed-resolution
+```
+
+该操作只允许作用于仍为 `待处理` 的 Material Record，并要求用户明确确认与非空 reason。执行前重新同步对象；revision 已变化时 fail closed。成功后只把结构化材料状态与 Markdown 中的 Knowledge-owned 状态镜像改为 `已处理`，记录 `material_resolved` revision 和 reason；材料正文、Source、provenance 与 stable identity 保留，不创建 Knowledge Asset，也不删除材料。写入后的 Authority fingerprint 必须对应实际修改后的 Markdown，因此随后无其他改动的 `maintain-sync` 不得制造额外 `external_edit` revision。
 
 ## 5. Knowledge Asset 明确退役
 

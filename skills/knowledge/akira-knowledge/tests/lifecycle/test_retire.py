@@ -197,7 +197,7 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
                 "SELECT status FROM knowledge_asset_lifecycle WHERE identity = ?",
                 (self.identity,),
             ).fetchone()[0]
-        self.assertEqual("7", schema_version)
+        self.assertEqual("8", schema_version)
         self.assertEqual("current", lifecycle)
 
     def test_current_schema_missing_lifecycle_authority_fails_closed_instead_of_guessing_current(self) -> None:
@@ -205,7 +205,7 @@ class RetireLifecycleBlackBoxTests(unittest.TestCase):
             schema_version = conn.execute(
                 "SELECT value FROM schema_meta WHERE key = 'schema_version'"
             ).fetchone()[0]
-            self.assertEqual("7", schema_version)
+            self.assertEqual("8", schema_version)
             conn.execute(
                 "DELETE FROM knowledge_asset_lifecycle WHERE identity = ?",
                 (self.identity,),

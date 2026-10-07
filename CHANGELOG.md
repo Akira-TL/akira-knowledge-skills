@@ -4,6 +4,7 @@
 
 ### Added
 
+- 增加 Material Record 显式结案：对已核验但无需创建 / 更新长期知识的 `待处理` 材料，Maintenance 可在绑定 current revision、记录 non-empty reason 并取得用户明确确认后转为 `已处理`；结构化 Authority 保存 `material_resolved` 事件与原因，材料正文、Source、provenance 和 stable identity 保留。
 - 增加 Human-readable Knowledge Writing Contract 与确定性 `writing-check`：Curate 新建正文必须清零结构 / 风格 finding，更新正文以当前 Authority 为 baseline，只阻止新增或加重写作问题；合同覆盖检索型标题、段落与句子密度、标题层级、列表 / 表格、wikilink、verification 与反 AI 元话语，并明确 Capture 保留原始输入不执行润色。
 - 增加单 Vault Knowledge workspace 初始化入口：建立根 `KNOWLEDGE.md` 人类 / Agent 路由、`AGENTS.md` 主动读取指针、独立 Git repository、最低公共 `收件箱/` / `系统/` / `.assets/` 入口，以及根级 `.akira-knowledge/knowledge.sqlite` 唯一结构化 Authority；一级内容 taxonomy 改由 `KNOWLEDGE.md` 按真实领域定义，不再强制“项目 / 知识 / 记录 / 成果”或 `00`–`99` 数字前缀。
 - 初始化 `Akira-TL/akira-knowledge-skills` 产品仓，并确立 `akira-knowledge` 作为 Primary Router。
@@ -13,6 +14,7 @@
 
 ### Fixed
 
+- 修正材料状态镜像写入后的 Authority fingerprint：Curate / Maintenance 现在记录实际变更后 Markdown 的 fingerprint，避免后续 `maintain-sync` 把自己刚写入的 `akira_knowledge_status` 误判成外部编辑并产生伪 revision。
 - `writing-check` 现在识别 `a.` / `b)` 等字母有序列表项，避免教学判断题和练习清单被错误拼接成一个长 prose 段落。
 - `writing-check` 的句长与段落长度统计现在只计算 Markdown link 的可见链接文本，不把隐藏的 URL destination 计入 prose 长度，避免官方文档长链接造成 `long_sentence` / `long_paragraph` 假阳性。
 - `writing-check` 现在把块级 LaTeX `\\[...\\]` 与 `$$...$$` 视为非正文块并保留原行号占位，避免统计 / 科研知识中的长公式被误判为 `long_sentence` 或墙状段落。

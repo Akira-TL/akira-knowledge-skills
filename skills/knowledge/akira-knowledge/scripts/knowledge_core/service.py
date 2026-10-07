@@ -14,6 +14,7 @@ from knowledge_core.workflows.maintain import (
     apply_update_proposal,
     create_retire_proposal,
     create_supersede_proposal,
+    resolve_material,
     revoke_relation,
     synchronize_object,
 )
@@ -93,6 +94,7 @@ __all__ = [
     "retrieve_filter",
     "retrieve_full_text",
     "retrieve_task_package",
+    "resolve_material",
     "review_source",
     "revoke_relation",
     "scan_network_health",

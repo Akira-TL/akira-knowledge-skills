@@ -261,7 +261,7 @@ def approve_curate_proposal(
                     locator=record.locator,
                     original=text,
                     transformed=transformed,
-                    fingerprint=fingerprint,
+                    fingerprint=authority_fingerprint(transformed),
                     status=status,
                     revision=record.revision,
                 )

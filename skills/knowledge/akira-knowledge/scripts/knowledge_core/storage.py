@@ -12,7 +12,7 @@ SYSTEM_DIR = ".akira-knowledge"
 CONFIG_NAME = "config.json"
 DB_NAME = "knowledge.sqlite"
 SCHEMA_VERSION = 1
-DB_SCHEMA_VERSION = 7
+DB_SCHEMA_VERSION = 8
 
 
 class StorageError(RuntimeError):
@@ -140,10 +140,10 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             "SELECT value FROM schema_meta WHERE key = 'schema_version'"
         ).fetchone()
         existing_version = None if existing is None else str(existing["value"])
-        if existing_version not in {None, "1", "2", "3", "4", "5", "6", str(DB_SCHEMA_VERSION)}:
+        if existing_version not in {None, "1", "2", "3", "4", "5", "6", "7", str(DB_SCHEMA_VERSION)}:
             raise StorageError(
                 f"unsupported SQLite schema version {existing_version!r}; "
-                f"expected 1, 2, 3, 4, 5, 6, or {DB_SCHEMA_VERSION}"
+                f"expected 1, 2, 3, 4, 5, 6, 7, or {DB_SCHEMA_VERSION}"
             )
         if existing_version == "2":
             from knowledge_core.persistence import lifecycle as lifecycle_store
@@ -180,6 +180,14 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             status TEXT NOT NULL CHECK (status IN ('待处理', '已处理')),
             captured_at TEXT NOT NULL,
             FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT
+        );
+        CREATE TABLE IF NOT EXISTS material_resolution_events (
+            identity TEXT NOT NULL,
+            revision INTEGER NOT NULL CHECK (revision >= 1),
+            reason TEXT NOT NULL,
+            recorded_at TEXT NOT NULL,
+            PRIMARY KEY (identity, revision),
+            FOREIGN KEY (identity) REFERENCES material_records(identity) ON DELETE RESTRICT
         );
         CREATE TABLE IF NOT EXISTS material_sources (
             material_identity TEXT NOT NULL,
@@ -350,10 +358,10 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         "SELECT value FROM schema_meta WHERE key = 'schema_version'"
     ).fetchone()
     current_db_version = None if current is None else str(current["value"])
-    if current_db_version not in {None, "1", "3", "4", "5", "6", str(DB_SCHEMA_VERSION)}:
+    if current_db_version not in {None, "1", "3", "4", "5", "6", "7", str(DB_SCHEMA_VERSION)}:
         raise StorageError(
             f"unsupported SQLite schema version {current_db_version!r}; "
-            f"expected 1, 3, 4, 5, 6, or {DB_SCHEMA_VERSION}"
+            f"expected 1, 3, 4, 5, 6, 7, or {DB_SCHEMA_VERSION}"
         )
 
     timestamp = now_utc()
@@ -380,6 +388,14 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         review_store.validate_schema_v5(conn)
         authority_edit_store.validate_schema_v6(conn)
         batch_store.validate_schema_v7(conn)
+        _validate_material_resolution_schema(conn)
+        return
+
+    if current_db_version == "7":
+        review_store.validate_schema_v5(conn)
+        authority_edit_store.validate_schema_v6(conn)
+        batch_store.validate_schema_v7(conn)
+        _migrate_schema_v7_to_v8(conn)
         return
 
     if current_db_version == "6":
@@ -398,6 +414,24 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
         authority_edit_store.migrate_schema_v5_to_v6(conn)
 
     batch_store.migrate_schema_v6_to_v7(conn)
+    _migrate_schema_v7_to_v8(conn)
+
+
+def _validate_material_resolution_schema(conn: sqlite3.Connection) -> None:
+    present = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+        "AND name = 'material_resolution_events'"
+    ).fetchone()
+    if present is None:
+        raise StorageError("Material resolution governance table is missing")
+
+
+def _migrate_schema_v7_to_v8(conn: sqlite3.Connection) -> None:
+    _validate_material_resolution_schema(conn)
+    conn.execute(
+        "UPDATE schema_meta SET value = '8' WHERE key = 'schema_version'"
+    )
+    conn.commit()
 
 
 def get_by_identity(conn: sqlite3.Connection, identity: str) -> ObjectRecord | None:
@@ -628,6 +662,8 @@ def mark_material_processed(
     identity: str,
     locator: str,
     fingerprint: str,
+    event: str = "processed_by_proposal",
+    reason: str | None = None,
 ) -> int:
     record = get_by_identity(conn, identity)
     if record is None or record.kind != "material_record":
@@ -637,6 +673,10 @@ def mark_material_processed(
         raise StorageError(f"material state does not exist: {identity}")
     if status == "已处理":
         return record.revision
+    if event not in {"processed_by_proposal", "material_resolved"}:
+        raise StorageError(f"unsupported material processing event: {event}")
+    if event == "material_resolved" and (reason is None or not reason.strip()):
+        raise StorageError("material resolution requires a non-empty reason")
 
     new_revision = record.revision + 1
     timestamp = now_utc()
@@ -650,9 +690,15 @@ def mark_material_processed(
     )
     conn.execute(
         "INSERT INTO revisions(identity, revision, event, locator, authority_fingerprint, recorded_at) "
-        "VALUES (?, ?, 'processed_by_proposal', ?, ?, ?)",
-        (identity, new_revision, locator, fingerprint, timestamp),
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (identity, new_revision, event, locator, fingerprint, timestamp),
     )
+    if event == "material_resolved":
+        conn.execute(
+            "INSERT INTO material_resolution_events(identity, revision, reason, recorded_at) "
+            "VALUES (?, ?, ?, ?)",
+            (identity, new_revision, reason.strip(), timestamp),
+        )
     return new_revision
 
 

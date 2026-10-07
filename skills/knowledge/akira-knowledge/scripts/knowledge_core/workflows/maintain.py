@@ -133,6 +133,89 @@ def synchronize_object(vault: Path, *, identity: str) -> dict[str, object]:
     }
 
 
+def resolve_material(
+    vault: Path,
+    *,
+    identity: str,
+    expected_revision: int,
+    reason: str,
+    confirmed_resolution: bool,
+) -> dict[str, object]:
+    root = _vault_root(vault)
+    if not confirmed_resolution:
+        raise BootstrapError("Resolving a Material Record requires explicit user confirmation")
+    if not reason.strip():
+        raise BootstrapError("Resolving a Material Record requires a non-empty reason")
+    if not storage.db_path(root).exists():
+        raise BootstrapError("Knowledge structured Authority store is missing")
+
+    conn = storage.connect(root)
+    path: Path | None = None
+    original: str | None = None
+    try:
+        storage.initialize_schema(conn)
+        conn.commit()
+        synced = _sync_and_commit(root, conn, identity)
+        if synced.kind != "material_record":
+            raise BootstrapError("Material resolution target is not a Material Record")
+        if synced.revision != expected_revision:
+            raise BootstrapError(
+                "Material resolution is stale because the Material Record revision changed; "
+                "read the current revision and confirm again"
+            )
+
+        status = storage.get_material_status(conn, identity)
+        if status is None:
+            raise BootstrapError(f"Material state does not exist: {identity}")
+        if status == "已处理":
+            raise BootstrapError("Material Record is already processed")
+
+        try:
+            transformed = replace_knowledge_property(
+                synced.text,
+                key=AK_STATUS,
+                value="已处理",
+            )
+        except MarkdownConflict as exc:
+            raise BootstrapError(
+                f"Cannot safely resolve material {synced.locator}: {exc}"
+            ) from exc
+        transformed_fingerprint = authority_fingerprint(transformed)
+        path = root / synced.locator
+        original = synced.text
+
+        try:
+            with storage.transaction(conn):
+                _write_atomic(path, transformed)
+                revision = storage.mark_material_processed(
+                    conn,
+                    identity=identity,
+                    locator=synced.locator,
+                    fingerprint=transformed_fingerprint,
+                    event="material_resolved",
+                    reason=reason,
+                )
+        except Exception:
+            if path is not None and original is not None:
+                try:
+                    _write_atomic(path, original)
+                except OSError:
+                    pass
+            raise
+    finally:
+        conn.close()
+
+    return {
+        "vault": str(root),
+        "stable_identity": identity,
+        "canonical_locator": synced.locator,
+        "status": "已处理",
+        "revision": revision,
+        "reason": reason.strip(),
+        "event": "material_resolved",
+    }
+
+
 def _only_disjoint_events_since(
     conn: sqlite3.Connection,
     *,
@@ -244,7 +327,7 @@ def apply_update_proposal(
                     locator=material_sync.locator,
                     original=material_sync.text,
                     transformed=transformed,
-                    fingerprint=material_sync.fingerprint,
+                    fingerprint=authority_fingerprint(transformed),
                     status=status,
                 )
             )

@@ -584,7 +584,7 @@ class BatchMaintenanceBlackBoxTests(unittest.TestCase):
         )
         with sqlite3.connect(self.database) as conn:
             self.assertEqual(
-                "7",
+                "8",
                 conn.execute(
                     "SELECT value FROM schema_meta WHERE key='schema_version'"
                 ).fetchone()[0],

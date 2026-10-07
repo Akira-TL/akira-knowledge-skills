@@ -14,7 +14,7 @@ description: 管理显式、持久、可检查、可更新和可复用的长期�
 - 明确要求长期保存、记下或加入知识库 → `knowledge-capture`；
 - 要把材料整理、提炼、综合成长期知识、为既有知识形成语义修改提案，或提出 / 检查 / 批准 / 拒绝正式机器关系候选 → `knowledge-curate`；
 - 要查找、筛选、全文搜索、按 stable identity 找回已有知识，或浏览当前 / 退役 / 已替代知识、材料 / Relation Graph Projection → `knowledge-retrieve`；
-- 要同步用户在 Obsidian 中的直接 edit / move / rename、执行已经批准的既有知识更新、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、提出 / 检查 / 拒绝 semantic conflict candidate、执行 Relation maintenance Review、检查 Knowledge Network 健康、维护人类 wikilink / user Property，或组织多个既有治理项进行明确子集批准与 batch execution → `knowledge-maintain`。
+- 要同步用户在 Obsidian 中的直接 edit / move / rename、执行已经批准的既有知识更新、明确把无需沉淀的材料记录结案为 `已处理`、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、提出 / 检查 / 拒绝 semantic conflict candidate、执行 Relation maintenance Review、检查 Knowledge Network 健康、维护人类 wikilink / user Property，或组织多个既有治理项进行明确子集批准与 batch execution → `knowledge-maintain`。
 
 一个请求跨越多个阶段时，Router 在 owning Skill 完成其有边界动作后重新判断下一意图。例如“把这段保存并整理成知识”先 Capture 得到材料记录，再进入 Curate；不能让 Capture 直接越权创建长期知识正文。
 
@@ -81,7 +81,7 @@ Akira Knowledge 专用 Properties 当前为：
 
 ## 7. 路由到 Maintenance
 
-用户要更新既有长期知识、已注册对象在 Obsidian 中发生 move / rename / direct edit 后准备继续写入、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、治理 semantic conflict / Relation maintenance candidate、检查 Knowledge Network orphan / unresolved / dead-end、修复人类 Authority 中的 wikilink / user Property、组织多个既有治理项进行明确子集批准与 batch execution，或明确撤回一个已接受 Relation Record 时，路由到 sibling `knowledge-maintain` Skill。普通正文更新仍先由 `knowledge-curate` 形成 proposal；Maintenance 负责同步 current revision、执行 stale-write 门禁并应用已批准 update。Knowledge Asset retire / supersede 都先形成绑定实际 revision 的 lifecycle proposal；Source Review、semantic conflict 与 Relation maintenance 则只形成绑定实际 identities / revisions / fingerprints / evidence 的待治理 Candidate，不直接改 Authority。Network health scan 保持只读；wikilink / user Property 修改先形成独立 revision-bound Authority edit proposal，只有明确批准后才写入。Batch 只引用这些既有 proposal / candidate 并独立保存各 item basis/result，不接受任意正文或 relation triple，也不建立新的 mutation 旁路。relation revoke 继续使用 expected revision 保护；新的 relation 语义继续走 Relation Candidate → approval。
+用户要更新既有长期知识、已注册对象在 Obsidian 中发生 move / rename / direct edit 后准备继续写入、明确把一个仍为 `待处理` 但无需形成长期知识的材料记录结案、明确退役 / supersede 当前 Knowledge Asset、检查既有 Source、治理 semantic conflict / Relation maintenance candidate、检查 Knowledge Network orphan / unresolved / dead-end、修复人类 Authority 中的 wikilink / user Property、组织多个既有治理项进行明确子集批准与 batch execution，或明确撤回一个已接受 Relation Record 时，路由到 sibling `knowledge-maintain` Skill。普通正文更新仍先由 `knowledge-curate` 形成 proposal；Maintenance 负责同步 current revision、执行 stale-write 门禁并应用已批准 update。Knowledge Asset retire / supersede 都先形成绑定实际 revision 的 lifecycle proposal；Source Review、semantic conflict 与 Relation maintenance 则只形成绑定实际 identities / revisions / fingerprints / evidence 的待治理 Candidate，不直接改 Authority。Network health scan 保持只读；wikilink / user Property 修改先形成独立 revision-bound Authority edit proposal，只有明确批准后才写入。Batch 只引用这些既有 proposal / candidate 并独立保存各 item basis/result，不接受任意正文或 relation triple，也不建立新的 mutation 旁路。relation revoke 继续使用 expected revision 保护；新的 relation 语义继续走 Relation Candidate → approval。
 
 ## 8. Obsidian 执行边界
 
