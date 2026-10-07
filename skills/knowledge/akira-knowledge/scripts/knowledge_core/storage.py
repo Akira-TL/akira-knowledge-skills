@@ -181,14 +181,6 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
             captured_at TEXT NOT NULL,
             FOREIGN KEY (identity) REFERENCES objects(identity) ON DELETE RESTRICT
         );
-        CREATE TABLE IF NOT EXISTS material_resolution_events (
-            identity TEXT NOT NULL,
-            revision INTEGER NOT NULL CHECK (revision >= 1),
-            reason TEXT NOT NULL,
-            recorded_at TEXT NOT NULL,
-            PRIMARY KEY (identity, revision),
-            FOREIGN KEY (identity) REFERENCES material_records(identity) ON DELETE RESTRICT
-        );
         CREATE TABLE IF NOT EXISTS material_sources (
             material_identity TEXT NOT NULL,
             ordinal INTEGER NOT NULL,
@@ -427,6 +419,18 @@ def _validate_material_resolution_schema(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_schema_v7_to_v8(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS material_resolution_events (
+            identity TEXT NOT NULL,
+            revision INTEGER NOT NULL CHECK (revision >= 1),
+            reason TEXT NOT NULL,
+            recorded_at TEXT NOT NULL,
+            PRIMARY KEY (identity, revision),
+            FOREIGN KEY (identity) REFERENCES material_records(identity) ON DELETE RESTRICT
+        )
+        """
+    )
     _validate_material_resolution_schema(conn)
     conn.execute(
         "UPDATE schema_meta SET value = '8' WHERE key = 'schema_version'"

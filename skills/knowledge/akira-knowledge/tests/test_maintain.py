@@ -182,6 +182,29 @@ class MaintainBlackBoxTests(unittest.TestCase):
             resolution,
         )
 
+    def test_current_schema_missing_material_resolution_authority_fails_closed(self) -> None:
+        with sqlite3.connect(self.database) as conn:
+            schema_version = conn.execute(
+                "SELECT value FROM schema_meta WHERE key = 'schema_version'"
+            ).fetchone()[0]
+            self.assertEqual("8", schema_version)
+            conn.execute("DROP TABLE material_resolution_events")
+            conn.commit()
+
+        failed = self.run_cli(
+            "retrieve-exact",
+            "--vault", str(self.vault),
+            "--identity", self.identity,
+            expect=2,
+        )
+        self.assertIn("Material resolution governance table is missing", failed.stderr)
+        with sqlite3.connect(self.database) as conn:
+            recreated = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' "
+                "AND name = 'material_resolution_events'"
+            ).fetchone()
+        self.assertIsNone(recreated)
+
     def test_material_resolution_rejects_stale_revision(self) -> None:
         material = self.capture("material whose current revision changes before resolution")
         material_path = self.vault / material["locator"]
