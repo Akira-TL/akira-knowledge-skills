@@ -6,56 +6,35 @@ from pathlib import Path
 import sqlite3
 import sys
 
-from knowledge_core.cli_commands.authority_edits import (
-    AUTHORITY_EDIT_COMMANDS,
-    dispatch_authority_edit_command,
-    register_authority_edit_commands,
+from knowledge_core.cli_commands.maintenance import (
+    MAINTENANCE_COMMANDS,
+    dispatch_maintenance_command,
+    register_maintenance_commands,
 )
 from knowledge_core.service import (
     BootstrapError,
-    apply_retire_proposal,
-    apply_supersede_proposal,
-    apply_update_proposal,
-    approve_batch,
     approve_curate_proposal,
     approve_relation_candidate,
     capture_material,
-    create_batch,
     create_curate_proposal,
-    create_retire_proposal,
-    create_supersede_proposal,
     create_relation_candidate,
-    execute_batch,
-    inspect_conflict_candidate,
     inspect_relation_candidate,
-    inspect_relation_maintenance_candidate,
-    inspect_review_candidate,
     initialize_workspace,
     inspect_vault,
     inspect_human_readable_knowledge,
     compare_human_readable_knowledge,
     format_writing_findings,
-    plan_source_review,
-    propose_conflict,
-    propose_relation_maintenance,
     rebuild_dynamic_views,
     rebuild_relation_graph,
     rebuild_full_text_projection,
     register_notes,
     reject_curate_proposal,
-    reject_conflict_candidate,
     reject_relation_candidate,
-    reject_relation_maintenance_candidate,
-    reject_review_candidate,
     retrieve_exact,
     retrieve_filter,
     retrieve_full_text,
     retrieve_task_package,
-    resolve_material,
-    review_source,
     revoke_relation,
-    scan_network_health,
-    synchronize_object,
 )
 from knowledge_core.storage import StorageError
 
@@ -240,197 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     graph_parser.add_argument("--vault", required=True, type=Path)
 
-    health_parser = subparsers.add_parser(
-        "maintain-health-scan",
-        help="Read-only diagnostics for orphan, unresolved, and dead-end Knowledge network states",
-    )
-    health_parser.add_argument("--vault", required=True, type=Path)
-
-    register_authority_edit_commands(subparsers)
-
-    batch_create_parser = subparsers.add_parser(
-        "maintain-batch-create",
-        help="Create a maintenance batch from existing governed proposals/candidates",
-    )
-    batch_create_parser.add_argument("--vault", required=True, type=Path)
-    batch_create_parser.add_argument("--update-proposal", action="append", default=[])
-    batch_create_parser.add_argument("--retire-proposal", action="append", default=[])
-    batch_create_parser.add_argument("--supersede-proposal", action="append", default=[])
-    batch_create_parser.add_argument("--authority-edit-proposal", action="append", default=[])
-    batch_create_parser.add_argument("--relation-candidate", action="append", default=[])
-    batch_create_parser.add_argument("--relation-revoke-candidate", action="append", default=[])
-
-    batch_approve_parser = subparsers.add_parser(
-        "maintain-batch-approve",
-        help="Approve an explicit subset of maintenance batch items",
-    )
-    batch_approve_parser.add_argument("--vault", required=True, type=Path)
-    batch_approve_parser.add_argument("--batch-id", required=True)
-    batch_approve_parser.add_argument("--item-id", action="append", default=[])
-    batch_approve_parser.add_argument("--confirmed-approval", action="store_true")
-
-    batch_execute_parser = subparsers.add_parser(
-        "maintain-batch-execute",
-        help="Execute approved maintenance items through their existing governance paths",
-    )
-    batch_execute_parser.add_argument("--vault", required=True, type=Path)
-    batch_execute_parser.add_argument("--batch-id", required=True)
-
-    sync_parser = subparsers.add_parser(
-        "maintain-sync", help="Synchronize current locator/fingerprint into the revision ledger"
-    )
-    sync_parser.add_argument("--vault", required=True, type=Path)
-    sync_parser.add_argument("--identity", required=True)
-
-    material_resolve_parser = subparsers.add_parser(
-        "maintain-resolve-material",
-        help="Explicitly mark one pending Material Record processed without creating Knowledge",
-    )
-    material_resolve_parser.add_argument("--vault", required=True, type=Path)
-    material_resolve_parser.add_argument("--identity", required=True)
-    material_resolve_parser.add_argument("--expected-revision", required=True, type=int)
-    material_resolve_parser.add_argument("--reason", required=True)
-    material_resolve_parser.add_argument(
-        "--confirmed-resolution", action="store_true"
-    )
-
-    update_parser = subparsers.add_parser(
-        "maintain-apply-update", help="Apply an approved update proposal with revision protection"
-    )
-    update_parser.add_argument("--vault", required=True, type=Path)
-    update_parser.add_argument("--proposal-id", required=True)
-    update_parser.add_argument("--confirmed-approval", action="store_true")
-
-    retire_propose_parser = subparsers.add_parser(
-        "maintain-propose-retire",
-        help="Create a revision-bound proposal to retire one current Knowledge Asset",
-    )
-    retire_propose_parser.add_argument("--vault", required=True, type=Path)
-    retire_propose_parser.add_argument("--identity", required=True)
-    retire_propose_parser.add_argument("--base-revision", required=True, type=int)
-    retire_propose_parser.add_argument("--reason", required=True)
-
-    retire_apply_parser = subparsers.add_parser(
-        "maintain-apply-retire",
-        help="Apply an explicitly approved Knowledge Asset retire proposal",
-    )
-    retire_apply_parser.add_argument("--vault", required=True, type=Path)
-    retire_apply_parser.add_argument("--proposal-id", required=True)
-    retire_apply_parser.add_argument("--confirmed-approval", action="store_true")
-
-    supersede_propose_parser = subparsers.add_parser(
-        "maintain-propose-supersede",
-        help="Create a revision-bound proposal to supersede one current Knowledge Asset",
-    )
-    supersede_propose_parser.add_argument("--vault", required=True, type=Path)
-    supersede_propose_parser.add_argument("--identity", required=True)
-    supersede_propose_parser.add_argument("--base-revision", required=True, type=int)
-    supersede_propose_parser.add_argument("--replacement-id", required=True)
-    supersede_propose_parser.add_argument("--replacement-revision", required=True, type=int)
-    supersede_propose_parser.add_argument("--reason", required=True)
-
-    supersede_apply_parser = subparsers.add_parser(
-        "maintain-apply-supersede",
-        help="Apply an explicitly approved Knowledge Asset supersede proposal",
-    )
-    supersede_apply_parser.add_argument("--vault", required=True, type=Path)
-    supersede_apply_parser.add_argument("--proposal-id", required=True)
-    supersede_apply_parser.add_argument("--confirmed-approval", action="store_true")
-
-    conflict_parser = subparsers.add_parser(
-        "maintain-propose-conflict",
-        help="Create a basis-bound semantic conflict candidate without modifying Authority",
-    )
-    conflict_parser.add_argument("--vault", required=True, type=Path)
-    conflict_parser.add_argument("--knowledge-id", action="append", default=[])
-    conflict_parser.add_argument("--source-finding-id", action="append", default=[])
-    conflict_parser.add_argument("--relation-id", action="append", default=[])
-    conflict_parser.add_argument("--conflict", required=True)
-    conflict_parser.add_argument("--evidence", required=True)
-
-    conflict_inspect_parser = subparsers.add_parser(
-        "maintain-inspect-conflict",
-        help="Revalidate and inspect one semantic conflict candidate",
-    )
-    conflict_inspect_parser.add_argument("--vault", required=True, type=Path)
-    conflict_inspect_parser.add_argument("--candidate-id", required=True)
-
-    conflict_reject_parser = subparsers.add_parser(
-        "maintain-reject-conflict",
-        help="Reject a pending or stale semantic conflict candidate",
-    )
-    conflict_reject_parser.add_argument("--vault", required=True, type=Path)
-    conflict_reject_parser.add_argument("--candidate-id", required=True)
-    conflict_reject_parser.add_argument("--confirmed-rejection", action="store_true")
-
-    relation_maintenance_parser = subparsers.add_parser(
-        "maintain-propose-relation-maintenance",
-        help="Create a basis-bound stale/conflict candidate for one active Relation Record",
-    )
-    relation_maintenance_parser.add_argument("--vault", required=True, type=Path)
-    relation_maintenance_parser.add_argument("--relation-id", required=True)
-    relation_maintenance_parser.add_argument(
-        "--kind",
-        required=True,
-        choices=("relation_stale", "relation_conflict"),
-    )
-    relation_maintenance_parser.add_argument("--source-finding-id")
-    relation_maintenance_parser.add_argument("--evidence", required=True)
-
-    relation_maintenance_inspect_parser = subparsers.add_parser(
-        "maintain-inspect-relation-maintenance",
-        help="Revalidate one Relation maintenance candidate",
-    )
-    relation_maintenance_inspect_parser.add_argument("--vault", required=True, type=Path)
-    relation_maintenance_inspect_parser.add_argument("--candidate-id", required=True)
-
-    relation_maintenance_reject_parser = subparsers.add_parser(
-        "maintain-reject-relation-maintenance",
-        help="Reject a pending or stale Relation maintenance candidate",
-    )
-    relation_maintenance_reject_parser.add_argument("--vault", required=True, type=Path)
-    relation_maintenance_reject_parser.add_argument("--candidate-id", required=True)
-    relation_maintenance_reject_parser.add_argument(
-        "--confirmed-rejection", action="store_true"
-    )
-
-    review_plan_parser = subparsers.add_parser(
-        "maintain-review-plan",
-        help="List provenance Sources that should be verified for one current Knowledge Asset",
-    )
-    review_plan_parser.add_argument("--vault", required=True, type=Path)
-    review_plan_parser.add_argument("--identity", required=True)
-
-    review_source_parser = subparsers.add_parser(
-        "maintain-review-source",
-        help="Record one verified Source review and create a stale maintenance candidate when changed",
-    )
-    review_source_parser.add_argument("--vault", required=True, type=Path)
-    review_source_parser.add_argument("--identity", required=True)
-    review_source_parser.add_argument("--source", required=True)
-    review_source_parser.add_argument("--basis-source-id")
-    review_source_parser.add_argument("--basis-revision")
-    review_source_parser.add_argument("--basis-fingerprint")
-    review_source_parser.add_argument("--unknown", action="store_true")
-    review_source_parser.add_argument("--observed-source-id")
-    review_source_parser.add_argument("--observed-revision")
-    review_source_parser.add_argument("--observed-fingerprint")
-    review_source_parser.add_argument("--evidence", required=True)
-
-    review_inspect_parser = subparsers.add_parser(
-        "maintain-inspect-review-candidate",
-        help="Revalidate and inspect one maintenance candidate",
-    )
-    review_inspect_parser.add_argument("--vault", required=True, type=Path)
-    review_inspect_parser.add_argument("--candidate-id", required=True)
-
-    review_reject_parser = subparsers.add_parser(
-        "maintain-reject-review-candidate",
-        help="Reject a pending or stale maintenance candidate",
-    )
-    review_reject_parser.add_argument("--vault", required=True, type=Path)
-    review_reject_parser.add_argument("--candidate-id", required=True)
-    review_reject_parser.add_argument("--confirmed-rejection", action="store_true")
+    register_maintenance_commands(subparsers)
 
     revoke_parser = subparsers.add_parser(
         "relation-revoke", help="Explicitly revoke an active Relation Record"
@@ -616,145 +405,8 @@ def main(argv: list[str] | None = None) -> int:
             payload = rebuild_dynamic_views(args.vault)
         elif args.command == "relation-graph-rebuild":
             payload = rebuild_relation_graph(args.vault)
-        elif args.command == "maintain-health-scan":
-            payload = scan_network_health(args.vault)
-        elif args.command in AUTHORITY_EDIT_COMMANDS:
-            payload = dispatch_authority_edit_command(args)
-        elif args.command == "maintain-batch-create":
-            payload = create_batch(
-                args.vault,
-                update_proposals=args.update_proposal,
-                retire_proposals=args.retire_proposal,
-                supersede_proposals=args.supersede_proposal,
-                authority_edit_proposals=args.authority_edit_proposal,
-                relation_candidates=args.relation_candidate,
-                relation_revoke_candidates=args.relation_revoke_candidate,
-            )
-        elif args.command == "maintain-batch-approve":
-            payload = approve_batch(
-                args.vault,
-                batch_id=args.batch_id,
-                item_ids=args.item_id,
-                confirmed_approval=args.confirmed_approval,
-            )
-        elif args.command == "maintain-batch-execute":
-            payload = execute_batch(
-                args.vault,
-                batch_id=args.batch_id,
-            )
-        elif args.command == "maintain-sync":
-            payload = synchronize_object(args.vault, identity=args.identity)
-        elif args.command == "maintain-resolve-material":
-            payload = resolve_material(
-                args.vault,
-                identity=args.identity,
-                expected_revision=args.expected_revision,
-                reason=args.reason,
-                confirmed_resolution=args.confirmed_resolution,
-            )
-        elif args.command == "maintain-apply-update":
-            payload = apply_update_proposal(
-                args.vault,
-                proposal_id=args.proposal_id,
-                confirmed_approval=args.confirmed_approval,
-            )
-        elif args.command == "maintain-propose-retire":
-            payload = create_retire_proposal(
-                args.vault,
-                identity=args.identity,
-                expected_base_revision=args.base_revision,
-                reason=args.reason,
-            )
-        elif args.command == "maintain-apply-retire":
-            payload = apply_retire_proposal(
-                args.vault,
-                proposal_id=args.proposal_id,
-                confirmed_approval=args.confirmed_approval,
-            )
-        elif args.command == "maintain-propose-supersede":
-            payload = create_supersede_proposal(
-                args.vault,
-                identity=args.identity,
-                expected_base_revision=args.base_revision,
-                replacement_identity=args.replacement_id,
-                expected_replacement_revision=args.replacement_revision,
-                reason=args.reason,
-            )
-        elif args.command == "maintain-apply-supersede":
-            payload = apply_supersede_proposal(
-                args.vault,
-                proposal_id=args.proposal_id,
-                confirmed_approval=args.confirmed_approval,
-            )
-        elif args.command == "maintain-propose-conflict":
-            payload = propose_conflict(
-                args.vault,
-                knowledge_ids=args.knowledge_id,
-                source_finding_ids=args.source_finding_id,
-                relation_ids=args.relation_id,
-                conflict=args.conflict,
-                evidence=args.evidence,
-            )
-        elif args.command == "maintain-inspect-conflict":
-            payload = inspect_conflict_candidate(
-                args.vault,
-                candidate_id=args.candidate_id,
-            )
-        elif args.command == "maintain-reject-conflict":
-            payload = reject_conflict_candidate(
-                args.vault,
-                candidate_id=args.candidate_id,
-                confirmed_rejection=args.confirmed_rejection,
-            )
-        elif args.command == "maintain-propose-relation-maintenance":
-            payload = propose_relation_maintenance(
-                args.vault,
-                relation_identity=args.relation_id,
-                candidate_kind=args.kind,
-                source_finding_id=args.source_finding_id,
-                evidence=args.evidence,
-            )
-        elif args.command == "maintain-inspect-relation-maintenance":
-            payload = inspect_relation_maintenance_candidate(
-                args.vault,
-                candidate_id=args.candidate_id,
-            )
-        elif args.command == "maintain-reject-relation-maintenance":
-            payload = reject_relation_maintenance_candidate(
-                args.vault,
-                candidate_id=args.candidate_id,
-                confirmed_rejection=args.confirmed_rejection,
-            )
-        elif args.command == "maintain-review-plan":
-            payload = plan_source_review(
-                args.vault,
-                identity=args.identity,
-            )
-        elif args.command == "maintain-review-source":
-            payload = review_source(
-                args.vault,
-                identity=args.identity,
-                source_locator=args.source,
-                basis_source_id=args.basis_source_id,
-                basis_revision=args.basis_revision,
-                basis_fingerprint=args.basis_fingerprint,
-                unknown=args.unknown,
-                observed_source_id=args.observed_source_id,
-                observed_revision=args.observed_revision,
-                observed_fingerprint=args.observed_fingerprint,
-                evidence=args.evidence,
-            )
-        elif args.command == "maintain-inspect-review-candidate":
-            payload = inspect_review_candidate(
-                args.vault,
-                candidate_id=args.candidate_id,
-            )
-        elif args.command == "maintain-reject-review-candidate":
-            payload = reject_review_candidate(
-                args.vault,
-                candidate_id=args.candidate_id,
-                confirmed_rejection=args.confirmed_rejection,
-            )
+        elif args.command in MAINTENANCE_COMMANDS:
+            payload = dispatch_maintenance_command(args)
         else:
             payload = revoke_relation(
                 args.vault,
