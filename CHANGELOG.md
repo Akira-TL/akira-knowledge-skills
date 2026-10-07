@@ -13,6 +13,7 @@
 
 ### Fixed
 
+- `writing-check` 现在识别 `a.` / `b)` 等字母有序列表项，避免教学判断题和练习清单被错误拼接成一个长 prose 段落。
 - `writing-check` 的句长与段落长度统计现在只计算 Markdown link 的可见链接文本，不把隐藏的 URL destination 计入 prose 长度，避免官方文档长链接造成 `long_sentence` / `long_paragraph` 假阳性。
 - `writing-check` 现在把块级 LaTeX `\\[...\\]` 与 `$$...$$` 视为非正文块并保留原行号占位，避免统计 / 科研知识中的长公式被误判为 `long_sentence` 或墙状段落。
 

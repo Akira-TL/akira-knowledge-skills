@@ -12,7 +12,7 @@ _BRACKET_MATH_RE = re.compile(r"(?ms)^\s*\\\[\s*$.*?^\s*\\\]\s*$")
 _DOLLAR_MATH_RE = re.compile(r"(?ms)^\s*\$\$\s*$.*?^\s*\$\$\s*$")
 _MARKDOWN_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]+\)")
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
-_LIST_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
+_LIST_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+|[A-Za-z][.)]\s+)")
 _TABLE_RE = re.compile(r"^\s*\|.*\|\s*$")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[。！？!?；;])(?:[”’\"']?)(?=\s*|$)")
 

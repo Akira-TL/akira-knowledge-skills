@@ -158,6 +158,22 @@ class HumanReadableWritingTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual([], payload["warnings"])
 
+    def test_alphabetic_ordered_list_items_are_not_merged_into_prose(self) -> None:
+        body = (
+            "# 判断题\n\n"
+            "请判断下面几项。\n\n"
+            "a. 第一项说明。（ ）  \n"
+            "b. 第二项说明。（ ）  \n"
+            "c. 第三项说明。（ ）  \n"
+            "d. 第四项说明。（ ）  \n"
+            "e. 第五项说明。（ ）\n"
+        )
+        payload = json.loads(
+            self.run_cli("writing-check", "--body", body, "--strict").stdout
+        )
+        self.assertTrue(payload["ok"])
+        self.assertEqual([], payload["warnings"])
+
     def test_long_markdown_link_destination_does_not_count_toward_sentence_length(self) -> None:
         body = (
             "# 引用链接示例\n\n"
